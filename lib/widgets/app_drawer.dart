@@ -31,6 +31,25 @@ class AppDrawer extends StatelessWidget {
             ),
           ),
           ListTile(
+            leading: const Icon(Icons.bar_chart),
+            title: const Text('Laporan Penjualan'),
+            onTap: () {
+              Navigator.pop(context); // Close the drawer
+              Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SalesReportScreen()));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.point_of_sale),
+            title: const Text('Kasir'),
+            onTap: () {
+              Navigator.pop(context); // Close the drawer
+              Navigator.pushReplacement(
+                  context, MaterialPageRoute(builder: (context) => const PosScreen()));
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.inventory),
             title: const Text('Inventaris'),
             onTap: () {
@@ -55,15 +74,6 @@ class AppDrawer extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.point_of_sale),
-            title: const Text('Kasir'),
-            onTap: () {
-              Navigator.pop(context); // Close the drawer
-              Navigator.pushReplacement(
-                  context, MaterialPageRoute(builder: (context) => const PosScreen()));
-            },
-          ),
-          ListTile(
             leading: const Icon(Icons.add_shopping_cart), // Atau Icons.inventory_outlined
             title: const Text('Catat Pembelian Stok'),
             onTap: () {
@@ -71,16 +81,6 @@ class AppDrawer extends StatelessWidget {
               Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => const RecordPurchaseScreen()));
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.bar_chart),
-            title: const Text('Laporan Penjualan'),
-            onTap: () {
-              Navigator.pop(context); // Close the drawer
-              Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SalesReportScreen()));
             },
           ),
         ],

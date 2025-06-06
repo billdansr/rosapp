@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/inventaris_screen.dart';
+import 'screens/sales_report_screen.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -21,7 +21,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: InventarisScreen(),
+      home: SalesReportScreen(),
     );
   }
 }
