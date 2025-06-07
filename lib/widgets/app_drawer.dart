@@ -78,7 +78,7 @@ class AppDrawer extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.add_shopping_cart), // Atau Icons.inventory_outlined
+            leading: const Icon(Icons.inventory_outlined),
             title: const Text('Catat Pembelian Stok'),
             selected: currentRoute == MyApp.recordPurchaseRoute,
             selectedTileColor: Colors.blue.withAlpha((0.1 * 255).toInt()),
