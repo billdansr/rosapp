@@ -6,7 +6,6 @@ import 'package:rosapp/models/purchase_detail.dart'; // Tambahkan import ini
 import 'package:rosapp/services/product_service.dart';
 import 'package:rosapp/widgets/app_drawer.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:excel/excel.dart' hide Border; // Sembunyikan Border dari paket excel
 import 'dart:io'; // Untuk File
 import 'package:open_filex/open_filex.dart'; // Untuk membuka file
@@ -288,8 +287,8 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
 
   Future<void> _generatePdfReport(String filePath) async {
     final pdf = pw.Document();
-    final baseFont = await pw.Font.helvetica(); // Pastikan Anda memiliki font ini di assets
-    final boldFont = await pw.Font.helveticaBold(); // Atau gunakan pw.Font.helveticaBold() dll.
+    final baseFont = pw.Font.helvetica(); // Pastikan Anda memiliki font ini di assets
+    final boldFont = pw.Font.helveticaBold(); // Atau gunakan pw.Font.helveticaBold() dll.
 
     final baseStyle = pw.TextStyle(font: baseFont, fontSize: 10);
     final boldStyle = pw.TextStyle(font: boldFont, fontSize: 10);
@@ -354,7 +353,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
           pw.SizedBox(height: 20),
           if (_purchasesForPeriodReport.isNotEmpty) ...[
             pw.Header(level: 1, text: 'Detail Pembelian dari Supplier', textStyle: subHeaderStyle),
-            pw.Table.fromTextArray(
+            pw.TableHelper.fromTextArray(
               context: context,
               headerStyle: boldStyle,
               cellStyle: baseStyle,
@@ -377,7 +376,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
           ],
           if (_transactionsForPeriodReport.isNotEmpty) ...[
             pw.Header(level: 1, text: _getPeriodTitle('Detail Transaksi Periode Ini'), textStyle: subHeaderStyle),
-             pw.Table.fromTextArray(
+            pw.TableHelper.fromTextArray(
               context: context,
               headerStyle: boldStyle,
               cellStyle: baseStyle,
