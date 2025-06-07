@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:rosapp/screens/category_screen.dart';
-import 'package:rosapp/screens/inventaris_screen.dart';
-import 'package:rosapp/screens/pos_screen.dart';
-import 'package:rosapp/screens/sales_report_screen.dart';
-import 'package:rosapp/screens/record_purchase_screen.dart';
+import 'package:rosapp/main.dart'; // Import MyApp to access route names
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final String? currentRoute = ModalRoute.of(context)?.settings.name;
+
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
@@ -33,54 +31,62 @@ class AppDrawer extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.bar_chart),
             title: const Text('Laporan Penjualan'),
+            selected: currentRoute == MyApp.salesReportRoute,
+            selectedTileColor: Colors.blue.withAlpha((0.1 * 255).toInt()),
             onTap: () {
               Navigator.pop(context); // Close the drawer
-              Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SalesReportScreen()));
+              if (currentRoute != MyApp.salesReportRoute) {
+                Navigator.pushReplacementNamed(context, MyApp.salesReportRoute);
+              }
             },
           ),
           ListTile(
             leading: const Icon(Icons.point_of_sale),
             title: const Text('Kasir'),
+            selected: currentRoute == MyApp.posRoute,
+            selectedTileColor: Colors.blue.withAlpha((0.1 * 255).toInt()),
+
             onTap: () {
               Navigator.pop(context); // Close the drawer
-              Navigator.pushReplacement(
-                  context, MaterialPageRoute(builder: (context) => const PosScreen()));
+              if (currentRoute != MyApp.posRoute) {
+                Navigator.pushReplacementNamed(context, MyApp.posRoute);
+              }
             },
           ),
           ListTile(
             leading: const Icon(Icons.inventory),
             title: const Text('Inventaris'),
+            selected: currentRoute == MyApp.inventarisRoute,
+            selectedTileColor: Colors.blue.withAlpha((0.1 * 255).toInt()),
             onTap: () {
               Navigator.pop(context); // Close the drawer
-              // Navigate to InventarisScreen, replacing the current screen
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const InventarisScreen()),
-              );
+              if (currentRoute != MyApp.inventarisRoute) {
+                Navigator.pushReplacementNamed(context, MyApp.inventarisRoute);
+              }
             },
           ),
           ListTile(
             leading: const Icon(Icons.category),
             title: const Text('Kategori Barang'),
+            selected: currentRoute == MyApp.categoryRoute,
+            selectedTileColor: Colors.blue.withAlpha((0.1 * 255).toInt()),
             onTap: () {
               Navigator.pop(context); // Close the drawer
-              Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const CategoryScreen()));
+              if (currentRoute != MyApp.categoryRoute) {
+                Navigator.pushReplacementNamed(context, MyApp.categoryRoute);
+              }
             },
           ),
           ListTile(
             leading: const Icon(Icons.add_shopping_cart), // Atau Icons.inventory_outlined
             title: const Text('Catat Pembelian Stok'),
+            selected: currentRoute == MyApp.recordPurchaseRoute,
+            selectedTileColor: Colors.blue.withAlpha((0.1 * 255).toInt()),
             onTap: () {
               Navigator.pop(context); // Close the drawer
-              Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const RecordPurchaseScreen()));
+              if (currentRoute != MyApp.recordPurchaseRoute) {
+                Navigator.pushReplacementNamed(context, MyApp.recordPurchaseRoute);
+              }
             },
           ),
         ],
