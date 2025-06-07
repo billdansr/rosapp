@@ -49,6 +49,7 @@ class _PosScreenState extends State<PosScreen> {
   Timer? _scanTimer;
   bool _selectionJustProcessedByAutocomplete =
       false; // Flag to prevent double processing
+  int _autocompleteKeyCounter = 0; // For resetting Autocomplete field
   final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ');
 
   @override
@@ -148,6 +149,7 @@ class _PosScreenState extends State<PosScreen> {
       _skuController.clear(); // Clear the input field after adding
       _selectionJustProcessedByAutocomplete =
           true; // Mark that selection was processed
+      _autocompleteKeyCounter++; // Increment to change Autocomplete key, forcing clear
     });
   }
 
@@ -882,6 +884,7 @@ class _PosScreenState extends State<PosScreen> {
               children: [
                 Expanded(
                   child: Autocomplete<Product>(
+                    key: ValueKey(_autocompleteKeyCounter), // Added key for resetting
                     // Parameter textEditingController dihapus karena tidak valid
                     optionsBuilder: (TextEditingValue textEditingValue) {
                       if (textEditingValue.text.isEmpty) {
@@ -918,9 +921,10 @@ class _PosScreenState extends State<PosScreen> {
                                 )
                               : null,
                         ),
-                        onChanged: (_) {
+                        onChanged: (currentTextInAutocompleteField) {
+                          // Sync the text to _skuController so "Tambah" button can read it
+                          _skuController.text = currentTextInAutocompleteField;
                           // Rebuild to show/hide clear button
-                          // ignore: invalid_use_of_protected_member, invalid_use_of_visible_for_testing_member
                           (context as Element).markNeedsBuild();
                         },
                         onSubmitted: (String submittedText) {
