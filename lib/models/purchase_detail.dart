@@ -1,5 +1,3 @@
-import 'package:intl/intl.dart';
-
 class PurchaseDetail {
   final int id;
   final int productId;

@@ -1,117 +1,217 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:rosapp/screens/pos_screen.dart'; // For CartItem
+import 'package:rosapp/screens/pos_screen.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 class ReceiptScreen extends StatelessWidget {
+  // Constants
+  static const String kStoreName = 'Warung Rosazza';
+  static const String kStoreAddressLine1 = 'Jl. Mega Nusa Endah No.Raya';
+  static const String kStoreAddressLine2 = 'Karyamulya, Kesambi, Cirebon';
+  static const String kThankYouMessage = 'TERIMA KASIH!';
+  static const String kNoReturnsMessage = 'Barang tidak dapat ditukar';
+  static const String kSeparator = '-------------------------------';
+  static const String kScreenSeparator =
+      '--------------------------------------------------';
+
+  // Formatters
+  static final NumberFormat _currencyFormat =
+      NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ');
+  static final DateFormat _receiptDateFormatter =
+      DateFormat('dd MMM yyyy HH:mm:ss');
+
   final List<CartItem> cartItems;
   final double totalPrice;
   final double cashTendered;
   final double change;
   final DateTime transactionTime;
+  final int transactionDbId; // Use this for the DB transaction ID
 
-  const ReceiptScreen({
+  ReceiptScreen({
     super.key,
     required this.cartItems,
     required this.totalPrice,
     required this.cashTendered,
     required this.change,
     required this.transactionTime,
-  });
+    required this.transactionDbId, // Make it required
+  }) : assert(cartItems.isNotEmpty);
 
   Future<void> _printReceipt(BuildContext context) async {
     final doc = pw.Document();
-    final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ');
-    final date = DateFormat('dd MMM yyyy, HH:mm:ss');
 
-    // Add page
     doc.addPage(
       pw.Page(
-        pageFormat: PdfPageFormat
-            .roll80, // Common for POS printers, or use PdfPageFormat.a4
+        pageFormat: PdfPageFormat.roll57,
         build: (pw.Context pdfContext) {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Center(
-                  child: pw.Text('--- Struk Pembayaran ---',
-                      style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold, fontSize: 14))),
-              pw.SizedBox(height: 5),
+                child: pw.Text(
+                  kStoreName,
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
               pw.Center(
-                  child: pw.Text('Waktu: ${date.format(transactionTime)}',
-                      style: const pw.TextStyle(fontSize: 10))),
-              pw.SizedBox(height: 10),
-              pw.Divider(),
+                child: pw.Text(
+                  kStoreAddressLine1,
+                  textAlign: pw.TextAlign.center,
+                  style: const pw.TextStyle(fontSize: 8),
+                ),
+              ),
+              pw.Center(
+                child: pw.Text(
+                  kStoreAddressLine2,
+                  textAlign: pw.TextAlign.center,
+                  style: const pw.TextStyle(fontSize: 8),
+                ),
+              ),
               pw.SizedBox(height: 5),
-              pw.Text('Barang:',
-                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              pw.Text(kSeparator, style: const pw.TextStyle(fontSize: 8)),
               pw.SizedBox(height: 3),
+              pw.Text(
+                'Tanggal: ${_receiptDateFormatter.format(transactionTime)}',
+                style: const pw.TextStyle(fontSize: 10),
+              ),
+              pw.Text(
+                'No. Transaksi: $transactionDbId', // Use the DB transaction ID
+                style: const pw.TextStyle(fontSize: 10),
+              ),
+              pw.SizedBox(height: 5),
+              pw.Text(kSeparator, style: const pw.TextStyle(fontSize: 8)),
+              pw.SizedBox(height: 5),
               ...cartItems.map(
                 (item) => pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Expanded(
-                        child: pw.Text(
-                            '${item.product.name} (${item.quantityInCart}x)',
-                            style: const pw.TextStyle(fontSize: 10))),
-                    pw.Text(currency.format(item.subtotal),
-                        style: const pw.TextStyle(fontSize: 10)),
+                    pw.Expanded( // Left side: Product name and details
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            item.product.name,
+                            style: const pw.TextStyle(fontSize: 10),
+                            maxLines: 2,
+                            overflow: pw.TextOverflow.span,
+                          ),
+                          pw.Text(
+                            '(${item.quantityInCart}x @ ${_currencyFormat.format(item.product.unitPrice)})',
+                            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                          ),
+                        ],
+                      ),
+                    ),
+                    pw.SizedBox(width: 5), // Spacer
+                    pw.Text( // Right side: Subtotal
+                      _currencyFormat.format(item.subtotal),
+                      style: const pw.TextStyle(fontSize: 10),
+                    ),
                   ],
                 ),
               ),
-              pw.Divider(),
+              pw.SizedBox(height: 5),
+              pw.Text(kSeparator, style: const pw.TextStyle(fontSize: 8)),
               pw.SizedBox(height: 5),
               pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Total Belanja:',
-                        style: pw.TextStyle(
-                            fontWeight: pw.FontWeight.bold, fontSize: 11)),
-                    pw.Text(currency.format(totalPrice),
-                        style: pw.TextStyle(
-                            fontWeight: pw.FontWeight.bold, fontSize: 11)),
-                  ]),
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    'Total Belanja:',
+                    style: const pw.TextStyle(fontSize: 10),
+                  ),
+                  pw.Text(
+                    _currencyFormat.format(totalPrice),
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
               pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Tunai:', style: const pw.TextStyle(fontSize: 11)),
-                    pw.Text(currency.format(cashTendered),
-                        style: const pw.TextStyle(fontSize: 11)),
-                  ]),
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    'Tunai:',
+                    style: const pw.TextStyle(fontSize: 10),
+                  ),
+                  pw.Text(
+                    _currencyFormat.format(cashTendered),
+                    style: const pw.TextStyle(fontSize: 10),
+                  ),
+                ],
+              ),
               pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Kembalian:',
-                        style: pw.TextStyle(
-                            fontWeight: pw.FontWeight.bold, fontSize: 11)),
-                    pw.Text(currency.format(change),
-                        style: pw.TextStyle(
-                            fontWeight: pw.FontWeight.bold, fontSize: 11)),
-                  ]),
-              pw.SizedBox(height: 15),
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    'Kembalian:',
+                    style: const pw.TextStyle(fontSize: 10),
+                  ),
+                  pw.Text(
+                    _currencyFormat.format(change),
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 5),
+              pw.Text(kSeparator, style: const pw.TextStyle(fontSize: 8)),
+              pw.SizedBox(height: 8),
               pw.Center(
-                  child: pw.Text('Terima Kasih!',
-                      style: pw.TextStyle(
-                          fontWeight: pw.FontWeight.bold, fontSize: 12))),
+                child: pw.Text(
+                  kThankYouMessage,
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+              pw.SizedBox(height: 3),
+              pw.Center(
+                child: pw.Text(
+                  kNoReturnsMessage,
+                  style: const pw.TextStyle(fontSize: 8),
+                ),
+              ),
             ],
           );
         },
       ),
     );
 
-    await Printing.layoutPdf(
-        onLayout: (PdfPageFormat format) async => doc.save());
+    try {
+      final printingInfo = await Printing.info();
+      if (!printingInfo.canPrint) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Layanan cetak tidak tersedia di perangkat ini.')),
+          );
+        }
+        return; // Do not proceed if printing is not available
+      }
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => doc.save(),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Print error: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat =
-        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ');
-    final dateFormat = DateFormat('dd MMM yyyy, HH:mm:ss');
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Struk Pembayaran'),
@@ -122,71 +222,198 @@ class ReceiptScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView(
-          children: [
-            Center(
-                child: Text('--- Struk Pembayaran ---',
-                    style: Theme.of(context).textTheme.titleLarge)),
-            const SizedBox(height: 8),
-            Center(child: Text('Waktu: ${dateFormat.format(transactionTime)}')),
-            const SizedBox(height: 16),
-            const Divider(),
-            ...cartItems.map((item) => ListTile(
-                  title: Text(item.product.name),
-                  subtitle: Text(
-                      '${item.quantityInCart} x ${currencyFormat.format(item.product.unitPrice)}'),
-                  trailing: Text(currencyFormat.format(item.subtotal)),
-                )),
-            const Divider(),
-            const SizedBox(height: 8),
-            _buildSummaryRow(
-                'Total Belanja:', currencyFormat.format(totalPrice), context,
-                isBold: true),
-            _buildSummaryRow(
-                'Tunai:', currencyFormat.format(cashTendered), context),
-            _buildSummaryRow(
-                'Kembalian:', currencyFormat.format(change), context,
-                isBold: true),
-            const SizedBox(height: 24),
-            Center(
-                child: Text('Terima Kasih!',
-                    style: Theme.of(context).textTheme.titleMedium)),
-            const SizedBox(height: 40),
-            ElevatedButton(
-              onPressed: () {
-                // Navigate back to POS screen, replacing the receipt screen
-                Navigator.of(context).popUntil((route) => route.isFirst);
-                // Or, if you want to go specifically to POS and it might not be the first:
-                // Navigator.of(context).pushAndRemoveUntil(
-                //   MaterialPageRoute(builder: (context) => const PosScreen()),
-                //   (Route<dynamic> route) => false,
-                // );
-              },
-              child: const Text('Transaksi Baru'),
-            )
-          ],
-        ),
+      body: _buildReceiptContent(context),
+    );
+  }
+
+  Widget _buildReceiptContent(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: ListView(
+        children: [
+          _buildStoreInfo(),
+          const SizedBox(height: 12),
+          _buildTransactionInfo(),
+          const SizedBox(height: 16),
+          ..._buildItemsList(),
+          const SizedBox(height: 8),
+          _buildPaymentSummary(),
+          const SizedBox(height: 16),
+          _buildFooter(),
+          const SizedBox(height: 40),
+          _buildNewTransactionButton(context),
+        ],
       ),
     );
   }
 
-  Widget _buildSummaryRow(String label, String value, BuildContext context,
-      {bool isBold = false}) {
+  Widget _buildStoreInfo() {
+    return Column(
+      children: [
+        Center(
+          child: Text(
+            kStoreName,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+        ),
+        Center(
+          child: Text(
+            kStoreAddressLine1,
+            style: const TextStyle(fontSize: 14),
+          ),
+        ),
+        Center(
+          child: Text(
+            kStoreAddressLine2,
+            style: const TextStyle(fontSize: 14),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTransactionInfo() {
+    return Column(
+      children: [
+        Text(
+          kScreenSeparator,
+          style: const TextStyle(fontSize: 14),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        _buildInfoRow(
+          'Tanggal:',
+          _receiptDateFormatter.format(transactionTime),
+        ),
+        _buildInfoRow(
+          'No. Transaksi:',
+          transactionDbId.toString(), // Use the DB transaction ID
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildItemsList() {
+    return [
+      Text(
+        kScreenSeparator,
+        style: const TextStyle(fontSize: 14),
+        textAlign: TextAlign.center,
+      ),
+      const SizedBox(height: 8),
+      ...cartItems.map((item) => ListTile(
+        dense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+        title: Text('${item.product.name} (${item.quantityInCart}x)'),
+        subtitle: Text(_currencyFormat.format(item.product.unitPrice)),
+        trailing: Text(_currencyFormat.format(item.subtotal)),
+      )),
+    ];
+  }
+
+  Widget _buildPaymentSummary() {
+    return Column(
+      children: [
+        Text(
+          kScreenSeparator,
+          style: const TextStyle(fontSize: 14),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        _buildSummaryRow(
+          'Total Belanja:',
+          _currencyFormat.format(totalPrice),
+          isBold: true,
+        ),
+        _buildSummaryRow(
+          'Tunai:',
+          _currencyFormat.format(cashTendered),
+        ),
+        const SizedBox(height: 4),
+        _buildSummaryRow(
+          'Kembalian:',
+          _currencyFormat.format(change),
+          isBold: true,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFooter() {
+    return Column(
+      children: [
+        Text(
+          kScreenSeparator,
+          style: const TextStyle(fontSize: 14),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
+        Center(
+          child: Text(
+            kThankYouMessage,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Center(
+          child: Text(
+            kNoReturnsMessage,
+            style: const TextStyle(fontSize: 14),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNewTransactionButton(BuildContext context) {
+    return ElevatedButton(
+      onPressed: () {
+        // Pop the ReceiptScreen to return to the PosScreen, which has already reset its state.
+        Navigator.of(context).pop();
+      },
+      child: const Text('Transaksi Baru'),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 16)),
+          Text(value, style: const TextStyle(fontSize: 16)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value, {bool isBold = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label,
-              style: TextStyle(
-                  fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 16)),
-          Text(value,
-              style: TextStyle(
-                  fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 16)),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: isBold ? 18 : 16,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              fontSize: isBold ? 18 : 16,
+            ),
+          ),
         ],
       ),
     );

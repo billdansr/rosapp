@@ -299,7 +299,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                                   barWidth: 3,
                                   isStrokeCapRound: true,
                                   dotData: const FlDotData(show: false),
-                                  belowBarData: BarAreaData(show: true, color: Colors.blue.withOpacity(0.2)),
+                                  belowBarData: BarAreaData(show: true, color: Colors.blue.withAlpha((0.2 * 255).toInt())),
                                 ),
                               ],
                             ),
@@ -516,8 +516,6 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
               }
           return '$baseTitle (${DateFormat('dd MMM').format(_selectedDateRange!.start)} - ${DateFormat('dd MMM yyyy').format(_selectedDateRange!.end)})';
         }
-        return baseTitle;
-      default:
         return baseTitle;
     }
   }

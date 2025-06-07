@@ -37,7 +37,8 @@ class _PosScreenState extends State<PosScreen> {
 
   List<CameraDescription> _cameras = [];
   List<Product> _allProducts = []; // To store all products for autocomplete
-  CameraLensDirection? _selectedCameraLensDirection; // Store selected camera's lens direction
+  CameraLensDirection?
+      _selectedCameraLensDirection; // Store selected camera's lens direction
   final List<CartItem> _cartItems = [];
   bool _isScanning = false;
   bool _isCameraInitialized = false;
@@ -46,7 +47,8 @@ class _PosScreenState extends State<PosScreen> {
   double _cashTendered = 0.0;
   double _change = 0.0;
   Timer? _scanTimer;
-  bool _selectionJustProcessedByAutocomplete = false; // Flag to prevent double processing
+  bool _selectionJustProcessedByAutocomplete =
+      false; // Flag to prevent double processing
   final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ');
 
   @override
@@ -144,10 +146,10 @@ class _PosScreenState extends State<PosScreen> {
         _cartItems.add(CartItem(product: product));
       }
       _skuController.clear(); // Clear the input field after adding
-      _selectionJustProcessedByAutocomplete = true; // Mark that selection was processed
+      _selectionJustProcessedByAutocomplete =
+          true; // Mark that selection was processed
     });
   }
-
 
   Future<void> _addProductToCartBySku() async {
     final query = _skuController.text.trim();
@@ -254,7 +256,8 @@ class _PosScreenState extends State<PosScreen> {
       _isCameraInitialized = false;
     });
 
-    _selectedCameraLensDirection = selectedCamera.lensDirection; // Store the lens direction
+    _selectedCameraLensDirection =
+        selectedCamera.lensDirection; // Store the lens direction
     await _initializeCamera(selectedCamera);
 
     if (_isCameraInitialized &&
@@ -372,8 +375,10 @@ class _PosScreenState extends State<PosScreen> {
       if (_selectedCameraLensDirection == CameraLensDirection.front) {
         img.Image? decodedImage = img.decodeImage(imageBytes);
         if (decodedImage != null) {
-          img.Image flippedImage = img.copyFlip(decodedImage, direction: img.FlipDirection.horizontal);
-          imageBytes = Uint8List.fromList(img.encodeJpg(flippedImage, quality: 90));
+          img.Image flippedImage = img.copyFlip(decodedImage,
+              direction: img.FlipDirection.horizontal);
+          imageBytes =
+              Uint8List.fromList(img.encodeJpg(flippedImage, quality: 90));
           log('Front camera image flipped and re-encoded, new size: ${imageBytes.lengthInBytes} bytes');
         } else {
           log('Failed to decode image for flipping (front camera).');
@@ -403,7 +408,8 @@ class _PosScreenState extends State<PosScreen> {
         argbInts[i++] = (a << 24) | (r << 16) | (g << 8) | b;
       }
 
-      final LuminanceSource source = RGBLuminanceSource(imageWidth, imageHeight, argbInts);
+      final LuminanceSource source =
+          RGBLuminanceSource(imageWidth, imageHeight, argbInts);
       final BinaryBitmap bitmap = BinaryBitmap(HybridBinarizer(source));
       final MultiFormatReader reader = MultiFormatReader();
       // Optional: Add hints for expected formats to speed up processing
@@ -741,28 +747,35 @@ class _PosScreenState extends State<PosScreen> {
 
     try {
       // Record the transaction and its items, and update stock
-      int transactionId = await _productService.recordTransaction(
+      final int transactionId = await _productService.recordTransaction( // This is the DB transaction ID
         totalPrice: total, // Diubah dari totalAmount
         date: DateTime.now(), // Diubah dari transactionTime
         items: _cartItems, // Kirim list CartItem langsung
       );
 
-      if (transactionId <= 0) { // Check if transaction was recorded successfully
-         if (!mounted) return;
-         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal mencatat transaksi.')));
-         return;
+      if (transactionId <= 0) {
+        // Check if transaction was recorded successfully
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal mencatat transaksi.')));
+        return;
       }
+
+      // Create a copy of cart items for the receipt *before* clearing the main cart
+      final List<CartItem> itemsForReceipt = List.from(_cartItems);
+      final DateTime receiptTransactionTime = DateTime.now();
 
       if (!mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => ReceiptScreen(
-            cartItems: List.from(_cartItems),
+            cartItems: itemsForReceipt, // Use the copied list
             totalPrice: total,
             cashTendered: _cashTendered,
             change: _change,
-            transactionTime: DateTime.now(),
+            transactionTime: receiptTransactionTime,
+            transactionDbId: transactionId, // Pass the DB transaction ID
           ),
         ),
       );
@@ -802,7 +815,8 @@ class _PosScreenState extends State<PosScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Bersihkan', style: TextStyle(color: Colors.white)),
+            child:
+                const Text('Bersihkan', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -817,6 +831,7 @@ class _PosScreenState extends State<PosScreen> {
       });
     }
   }
+
   @override
   void dispose() {
     _scanTimer?.cancel();
@@ -837,12 +852,15 @@ class _PosScreenState extends State<PosScreen> {
           IconButton(
             icon: const Icon(Icons.remove_shopping_cart_outlined),
             tooltip: 'Bersihkan Keranjang',
-            onPressed: _cartItems.isNotEmpty ? _confirmClearCart : null, // Disable if cart is empty
-            color: _cartItems.isNotEmpty ? Colors.white : Colors.white.withAlpha(150),
+            onPressed: _cartItems.isNotEmpty
+                ? _confirmClearCart
+                : null, // Disable if cart is empty
+            color: _cartItems.isNotEmpty
+                ? Colors.white
+                : Colors.white.withAlpha(150),
           ),
           const SizedBox(width: 8),
         ],
-
       ),
       drawer: const AppDrawer(),
       body: Column(
@@ -863,38 +881,42 @@ class _PosScreenState extends State<PosScreen> {
             child: Row(
               children: [
                 Expanded(
-                  child: Autocomplete<Product>( // Parameter textEditingController dihapus karena tidak valid
+                  child: Autocomplete<Product>(
+                    // Parameter textEditingController dihapus karena tidak valid
                     optionsBuilder: (TextEditingValue textEditingValue) {
                       if (textEditingValue.text.isEmpty) {
                         return const Iterable<Product>.empty();
                       }
                       final query = textEditingValue.text.toLowerCase();
                       // Filter only by SKU for suggestions
-                      return _allProducts.where((Product product) => product.sku.toLowerCase().contains(query));
+                      return _allProducts.where((Product product) =>
+                          product.sku.toLowerCase().contains(query));
                     },
-                    displayStringForOption: (Product option) => option.sku, // Display only SKU or SKU + Name as preferred
+                    displayStringForOption: (Product option) => option
+                        .sku, // Display only SKU or SKU + Name as preferred
                     fieldViewBuilder: (BuildContext context,
                         TextEditingController fieldTextEditingController,
                         FocusNode fieldFocusNode,
                         VoidCallback onFieldSubmitted) {
                       // TextField ini menggunakan fieldTextEditingController yang disediakan oleh Autocomplete
                       // agar saran dapat muncul dengan benar.
-                        return TextField(
+                      return TextField(
                         controller: fieldTextEditingController,
                         focusNode: fieldFocusNode,
                         decoration: InputDecoration(
                           labelText: 'Masukkan Kode Barang (SKU)',
                           prefixIcon: const Icon(Icons.search),
                           border: const OutlineInputBorder(),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                           suffixIcon: fieldTextEditingController.text.isNotEmpty
-                            ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                              fieldTextEditingController.clear();
-                              },
-                            )
-                            : null,
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () {
+                                    fieldTextEditingController.clear();
+                                  },
+                                )
+                              : null,
                         ),
                         onChanged: (_) {
                           // Rebuild to show/hide clear button
@@ -905,16 +927,17 @@ class _PosScreenState extends State<PosScreen> {
                           onFieldSubmitted(); // Panggil handler internal Autocomplete
 
                           if (_selectionJustProcessedByAutocomplete) {
-                          _selectionJustProcessedByAutocomplete = false; // Reset flag
-                          // _skuController already cleared by _addProductToCart
-                          // fieldTextEditingController now holds displayString, which is fine for visual feedback
-                          return; // Do not reprocess if onSelected handled it
+                            _selectionJustProcessedByAutocomplete =
+                                false; // Reset flag
+                            // _skuController already cleared by _addProductToCart
+                            // fieldTextEditingController now holds displayString, which is fine for visual feedback
+                            return; // Do not reprocess if onSelected handled it
                           }
                           // If not handled by onSelected, process the text as a direct query
                           _skuController.text = fieldTextEditingController.text;
                           _addProductToCartBySku();
                         },
-                        );
+                      );
                     },
                     onSelected: (Product selection) {
                       _addProductToCart(selection);
@@ -1182,9 +1205,9 @@ IconData _getCameraLensIcon(CameraLensDirection direction) {
       return Icons.camera_front;
     case CameraLensDirection.back:
       return Icons.camera_rear;
-    case CameraLensDirection.external:
+    case CameraLensDirection.external: // Assuming external is a possibility
       return Icons.videocam;
-    default: // Handle CameraLensDirection.unknown or any other future values
-      return Icons.camera;
+    // No default needed as the switch is now exhaustive for all known enum members.
+    // The Dart analyzer will ensure exhaustiveness if CameraLensDirection changes.
   }
 }

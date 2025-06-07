@@ -37,10 +37,6 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     }
     _loadCategories();
   }
-  Future<void> _loadProductCategories() async {
-    final categoryIds = await ProductService().getProductCategories(widget.product!.id!);
-    setState(() => _selectedCategoryIds.addAll(categoryIds));
-  }
 
   Future<void> _loadCategories() async {
     final categories = await ProductService().getAllCategories();
