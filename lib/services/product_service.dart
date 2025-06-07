@@ -1,5 +1,6 @@
 import 'package:intl/intl.dart';
 import 'package:rosapp/models/category.dart';
+import 'package:rosapp/models/purchase_detail.dart';
 import 'package:rosapp/screens/pos_screen.dart'; // Untuk CartItem
 import 'package:rosapp/models/product.dart';
 import 'package:rosapp/models/transaction_detail.dart'; // Asumsikan model ini ada
@@ -326,5 +327,12 @@ class ProductService {
       ORDER BY sales_date ASC
     ''', [startDateSql, endDateSql]);
     return result;
+  }
+
+  Future<List<PurchaseDetail>> getPurchasesForPeriodReport(DateTime startDate, DateTime endDate) async {
+    final List<Map<String, dynamic>> maps = await DBHelper.getPurchasesWithDetailsForPeriod(startDate, endDate);
+    return List.generate(maps.length, (i) {
+      return PurchaseDetail.fromMap(maps[i]);
+    });
   }
 }

@@ -66,7 +66,7 @@ class _PosScreenState extends State<PosScreen> {
     try {
       _cameraController = CameraController(
         cameraDescription,
-        ResolutionPreset.high,
+        ResolutionPreset.low, // Atau bahkan .low jika kualitas masih cukup
         enableAudio: false,
       );
       await _cameraController!.initialize().then((_) async {

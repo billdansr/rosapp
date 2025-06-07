@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart'; // Import fl_chart
 import 'package:rosapp/models/transaction_detail.dart';
+import 'package:rosapp/models/purchase_detail.dart'; // Tambahkan import ini
 import 'package:rosapp/services/product_service.dart';
 import 'package:rosapp/widgets/app_drawer.dart';
 
@@ -41,6 +42,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
   List<TransactionDetail> _recentTransactions = [];
   double _estimatedProfitForPeriod = 0.0;
   List<FlSpot> _salesChartData = [];
+  List<PurchaseDetail> _purchasesForPeriodReport = []; // State baru untuk detail pembelian
 
   @override
   void initState() {
@@ -95,6 +97,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
       final purchasesForPeriod = await _productService.getTotalPurchasesForPeriod(startDate, endDate);
       final recent = await _productService.getRecentTransactions(limit: 5);
       final chartDataRaw = await _productService.getDailySalesForChart(startDate, endDate);
+      final purchasesReport = await _productService.getPurchasesForPeriodReport(startDate, endDate); // Ambil data pembelian
 
       List<FlSpot> chartSpots = [];
       if (chartDataRaw.isNotEmpty) {
@@ -145,6 +148,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
         _recentTransactions = recent;
         _estimatedProfitForPeriod = salesForPeriod - cogsForPeriod;
         _salesChartData = chartSpots;
+        _purchasesForPeriodReport = purchasesReport; // Simpan data pembelian
         _isLoading = false;
       });
     } catch (e) {
@@ -347,6 +351,42 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                     icon: Icons.attach_money,
                     color: _estimatedProfitForPeriod >= 0 ? Colors.teal : Colors.pink,
                   ),
+                  const SizedBox(height: 24),
+                  // Bagian Baru: Detail Pembelian oleh Supplier
+                  Text(
+                    _getPeriodTitle('Detail Pembelian dari Supplier'),
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  _purchasesForPeriodReport.isEmpty
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 20.0),
+                            child: Text('Belum ada data pembelian untuk periode ini.'),
+                          ),
+                        )
+                      : Card(
+                          elevation: 2,
+                          child: Column(
+                            children: _purchasesForPeriodReport.map((purchase) {
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: Colors.orange.shade100,
+                                  child: const Icon(Icons.storefront_outlined, color: Colors.orange),
+                                ),
+                                title: Text(
+                                  '${purchase.productName} - ${currencyFormatter.format(purchase.totalCost)}',
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
+                                ),
+                                subtitle: Text(
+                                  'Supplier: ${purchase.supplierName ?? "-"}\n'
+                                  'Tgl: ${DateFormat('dd MMM yyyy').format(purchase.purchaseDate)} | Jml: ${purchase.quantityPurchased} @ ${currencyFormatter.format(purchase.purchasePricePerUnit)}'
+                                ),
+                                isThreeLine: true,
+                              );
+                            }).toList(),
+                          ),
+                        ),
                   const SizedBox(height: 24),
                   Text(
                     'Transaksi Terbaru',

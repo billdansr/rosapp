@@ -4,8 +4,7 @@ import 'package:path/path.dart';
 class DBHelper {
   static Database? _database;
   static const String dbName = 'rosapp.db';
-      // NAIKKAN VERSI DATABASE untuk perubahan skema transaksi
-      static const int dbVersion = 5; // Sebelumnya 4
+  static const int dbVersion = 1;
 
   static Future<Database> get database async {
     if (_database != null) return _database!;
@@ -60,27 +59,16 @@ class DBHelper {
     await _createPurchasesTable(db); // Tambahkan ini
   }
 
-  // Metode untuk menangani upgrade database
+  // Metode untuk menangani upgrade database dari versi 1 ke versi berikutnya.
+  // Karena versi 1 sekarang adalah skema awal yang lengkap,
+  // migrasi historis sebelumnya tidak lagi relevan di sini.
   static Future<void> _onUpgrade(
       Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      await _createTransactionTables(db);
-    }
-    if (oldVersion < 3) { // Tambahkan blok ini untuk versi 3
-      await _createPurchasesTable(db);
-    }
-    if (oldVersion < 4) {
-      await db.execute("DROP TABLE IF EXISTS categories");
-      await db.execute('''
-          CREATE TABLE categories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-            name TEXT NOT NULL UNIQUE
-          )
-        ''');
-    }
-    if (oldVersion < 5) { // Perubahan skema transaksi
-      await _dropAndRecreateTransactionTables(db);
-    }
+    // Logika untuk migrasi dari v1 ke v2, v2 ke v3, dst., akan ditambahkan di sini di masa mendatang.
+    // Contoh:
+    // if (oldVersion < 2 && newVersion >= 2) {
+    //   // await db.execute('ALTER TABLE products ADD COLUMN new_column TEXT;');
+    // }
   }
   // Helper method untuk membuat tabel transaksi agar tidak duplikasi kode
   static Future<void> _createTransactionTables(Database db) async {
@@ -143,5 +131,19 @@ class DBHelper {
         FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
       )
     ''');
+  }
+
+  // Mengambil detail pembelian untuk laporan dalam rentang tanggal tertentu
+  static Future<List<Map<String, dynamic>>> getPurchasesWithDetailsForPeriod(DateTime startDate, DateTime endDate) async {
+    final db = await database;
+    final String start = startDate.toIso8601String();
+    final String end = endDate.toIso8601String(); // Pastikan endDate mencakup keseluruhan hari jika perlu
+    return await db.rawQuery('''
+        SELECT p.*, pr.name as product_name 
+        FROM purchases p
+        JOIN products pr ON p.product_id = pr.id
+        WHERE p.purchase_date BETWEEN ? AND ?
+        ORDER BY p.purchase_date DESC
+    ''', [start, end]);
   }
 }
