@@ -1,7 +1,7 @@
 import 'package:intl/intl.dart';
+import 'package:rosapp/models/cart_item.dart';
 import 'package:rosapp/models/category.dart';
 import 'package:rosapp/models/purchase_detail.dart';
-import 'package:rosapp/screens/pos_screen.dart'; // Untuk CartItem
 import 'package:rosapp/models/product.dart';
 import 'package:rosapp/models/transaction_detail.dart'; // Asumsikan model ini ada
 import 'package:rosapp/models/purchase.dart'; // Import the Purchase model

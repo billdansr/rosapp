@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:intl/intl.dart';
 import 'package:rosapp/models/product.dart';
+import 'package:rosapp/models/cart_item.dart'; // Import CartItem model
 import 'package:rosapp/services/product_service.dart';
 import 'package:rosapp/widgets/app_drawer.dart';
+import 'package:rosapp/services/cart_service.dart'; // Import CartService
 import 'package:rosapp/screens/receipt_screen.dart';
 import 'dart:async';
 import 'dart:typed_data';
@@ -19,14 +21,7 @@ class PosScreen extends StatefulWidget {
   State<PosScreen> createState() => _PosScreenState();
 }
 
-class CartItem {
-  final Product product;
-  int quantityInCart;
-
-  CartItem({required this.product, this.quantityInCart = 1});
-
-  double get subtotal => product.unitPrice * quantityInCart;
-}
+// CartItem class definition removed, will use the one from models/cart_item.dart
 
 class _PosScreenState extends State<PosScreen> {
   final ProductService _productService = ProductService();
@@ -34,12 +29,12 @@ class _PosScreenState extends State<PosScreen> {
   // No specific scanner object needed for zxing_lib as a state variable
   final _skuController = TextEditingController();
   final _cashTenderedController = TextEditingController();
+  final CartService _cartService = CartService(); // Use CartService instance
 
   List<CameraDescription> _cameras = [];
   List<Product> _allProducts = []; // To store all products for autocomplete
   CameraLensDirection?
       _selectedCameraLensDirection; // Store selected camera's lens direction
-  final List<CartItem> _cartItems = [];
   bool _isScanning = false;
   bool _isCameraInitialized = false;
   bool _isDetecting = false;
@@ -138,14 +133,8 @@ class _PosScreenState extends State<PosScreen> {
       _stopScanning(); // Stop scanning if a product is added via autocomplete
     }
 
+    _cartService.addToCart(product);
     setState(() {
-      final existingIndex =
-          _cartItems.indexWhere((item) => item.product.id == product.id);
-      if (existingIndex != -1) {
-        _cartItems[existingIndex].quantityInCart++;
-      } else {
-        _cartItems.add(CartItem(product: product));
-      }
       _skuController.clear(); // Clear the input field after adding
       _selectionJustProcessedByAutocomplete =
           true; // Mark that selection was processed
@@ -706,21 +695,17 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   void _incrementQuantity(CartItem item) {
-    setState(() => item.quantityInCart++);
+    _cartService.incrementQuantity(item);
+    setState(() {});
   }
 
   void _decrementQuantity(CartItem item) {
-    setState(() {
-      if (item.quantityInCart > 1) {
-        item.quantityInCart--;
-      } else {
-        _cartItems.remove(item);
-      }
-    });
+    _cartService.decrementQuantity(item);
+    setState(() {});
   }
 
   double _calculateTotal() =>
-      _cartItems.fold(0, (sum, item) => sum + item.subtotal);
+      _cartService.calculateTotal(); // Use CartService
 
   void _updateChange() {
     final total = _calculateTotal();
@@ -732,7 +717,7 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   Future<void> _handleCheckout() async {
-    if (_cartItems.isEmpty) {
+    if (_cartService.getCartItems().isEmpty) { // Use CartService
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Keranjang masih kosong')),
       );
@@ -752,7 +737,7 @@ class _PosScreenState extends State<PosScreen> {
       final int transactionId = await _productService.recordTransaction( // This is the DB transaction ID
         totalPrice: total, // Diubah dari totalAmount
         date: DateTime.now(), // Diubah dari transactionTime
-        items: _cartItems, // Kirim list CartItem langsung
+        items: _cartService.getCartItems(), // Send items from CartService
       );
 
       if (transactionId <= 0) {
@@ -764,7 +749,7 @@ class _PosScreenState extends State<PosScreen> {
       }
 
       // Create a copy of cart items for the receipt *before* clearing the main cart
-      final List<CartItem> itemsForReceipt = List.from(_cartItems);
+      final List<CartItem> itemsForReceipt = List.from(_cartService.getCartItems()); // Get items from service
       final DateTime receiptTransactionTime = DateTime.now();
 
       if (!mounted) return;
@@ -782,8 +767,8 @@ class _PosScreenState extends State<PosScreen> {
         ),
       );
 
+      _cartService.clearCart(); // Clear cart via service
       setState(() {
-        _cartItems.clear();
         _cashTenderedController.clear();
         _cashTendered = 0;
         _change = 0;
@@ -797,7 +782,7 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   void _confirmClearCart() async {
-    if (_cartItems.isEmpty) {
+    if (_cartService.getCartItems().isEmpty) { // Use CartService
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Keranjang sudah kosong.')),
       );
@@ -825,8 +810,8 @@ class _PosScreenState extends State<PosScreen> {
     );
 
     if (confirm == true) {
+      _cartService.clearCart(); // Clear cart via service
       setState(() {
-        _cartItems.clear();
         _cashTenderedController.clear();
         _cashTendered = 0.0;
         _change = 0.0;
@@ -854,10 +839,10 @@ class _PosScreenState extends State<PosScreen> {
           IconButton(
             icon: const Icon(Icons.remove_shopping_cart_outlined),
             tooltip: 'Bersihkan Keranjang',
-            onPressed: _cartItems.isNotEmpty
+            onPressed: _cartService.getCartItems().isNotEmpty // Use CartService
                 ? _confirmClearCart
                 : null, // Disable if cart is empty
-            color: _cartItems.isNotEmpty
+            color: _cartService.getCartItems().isNotEmpty // Use CartService
                 ? Colors.white
                 : Colors.white.withAlpha(150),
           ),
@@ -977,7 +962,7 @@ class _PosScreenState extends State<PosScreen> {
             ),
           ),
           Expanded(
-            child: _cartItems.isEmpty
+            child: _cartService.getCartItems().isEmpty // Use CartService
                 ? const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -1006,11 +991,11 @@ class _PosScreenState extends State<PosScreen> {
                     ),
                   )
                 : ListView.separated(
-                    itemCount: _cartItems.length,
+                    itemCount: _cartService.getCartItems().length, // Use CartService
                     separatorBuilder: (context, index) =>
                         const Divider(height: 1),
                     itemBuilder: (context, index) {
-                      final item = _cartItems[index];
+                      final item = _cartService.getCartItems()[index]; // Use CartService
                       return Container(
                         padding: const EdgeInsets.symmetric(
                             vertical: 8, horizontal: 16),
@@ -1182,7 +1167,7 @@ class _PosScreenState extends State<PosScreen> {
                       ),
                     ),
                     onPressed:
-                        _cartItems.isEmpty || _cashTendered < _calculateTotal()
+                        _cartService.getCartItems().isEmpty || _cashTendered < _calculateTotal() // Use CartService
                             ? null
                             : _handleCheckout,
                     child: const Text(

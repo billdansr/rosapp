@@ -4,7 +4,9 @@ import 'package:rosapp/models/product.dart';
 import 'package:rosapp/screens/product_detail_screen.dart';
 import 'package:rosapp/screens/product_form_screen.dart';
 import 'package:rosapp/services/product_service.dart';
+import 'package:rosapp/services/cart_service.dart'; // Import CartService
 import 'package:rosapp/widgets/app_drawer.dart';
+import 'package:rosapp/main.dart'; // Import MyApp for route names
 import 'package:intl/intl.dart';
 
 class InventarisScreen extends StatefulWidget {
@@ -257,9 +259,35 @@ class _InventarisScreenState extends State<InventarisScreen> {
                                     ),
                                   ],
                                 ),
-                                trailing: Text(
-                                  currency.format(product.unitPrice),
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.blue),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      currency.format(product.unitPrice),
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.blue),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    IconButton(
+                                      icon: const Icon(Icons.add_shopping_cart),
+                                      color: Theme.of(context).primaryColor,
+                                      tooltip: 'Tambah ke Keranjang',
+                                      onPressed: () {
+                                        CartService().addToCart(product);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('${product.name} ditambahkan ke keranjang.'),
+                                            duration: const Duration(seconds: 2),
+                                            action: SnackBarAction(
+                                              label: 'LIHAT KERANJANG',
+                                              onPressed: () {
+                                                Navigator.pushNamed(context, MyApp.posRoute);
+                                              },
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
                                 ),
                                 onTap: () => _navigateToDetail(product),
                               ),
