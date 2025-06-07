@@ -59,6 +59,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  msix: ^3.16.9
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -104,3 +105,37 @@ flutter:
 
 dependency_overrides:
   camera_windows: ^0.2.6+2
+
+msix_config:
+  # The name of your application as it will appear in the Start Menu, app lists, etc.
+  display_name: RosApp
+
+  # Your developer or brand name.
+  publisher_display_name: BilldanDev
+
+  # A unique identifier for your app package.
+  # For indie developers, a common pattern is: yourbrand.appname
+  # IMPORTANT: This MUST be unique. Replace "com.example.rosapp".
+  identity_name: dev.billdandev.rosapp
+
+  # The version of your MSIX package. It should generally align with your
+  # app's version (from the `version:` field above, e.g., 1.0.0)
+  # and must be in the format X.X.X.X.
+  # The last digit is often used for MSIX package revisions if the app code hasn't changed.
+  msix_version: 1.0.0.1 # Should match/increment with your app version
+
+  # Path to your application's logo.
+  # A .png (e.g., 256x256px or 512x512px) is recommended as MSIX can generate various required sizes.
+  # You can use the existing .ico: "windows\\runner\\resources\\app_icon.ico"
+  # Or, create a new one, e.g., "assets\\icon\\app_icon.png" (and ensure this file exists).
+  logo_path: windows\runner\resources\app_icon.ico
+
+  # Capabilities your app needs. Uncomment and add as necessary.
+  # If your app uses the internet (e.g., for fetching data, updates):
+  # capabilities: "internetClient, location" # Add capabilities your app needs
+  # For most local/sideloaded apps, 'store: false' (or omitting it) is correct.
+  # Set to true ONLY if you are preparing this for the Microsoft Store.
+  # store: false # Keep false or remove for non-Store distribution
+  # If you have an official code signing certificate:
+  # certificate_path: C:\path\to\your\official_certificate.pfx
+  # certificate_password: your_certificate_password
