@@ -1,7 +1,6 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter/services.dart'; // Required for DeviceOrientation
 import 'package:intl/intl.dart';
 import 'package:rosapp/models/product.dart';
 import 'package:rosapp/models/cart_item.dart'; // Import CartItem model
@@ -12,9 +11,10 @@ import 'package:rosapp/screens/receipt_screen.dart';
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:developer';
-import 'package:image/image.dart' as img; // Import the image package
-import 'package:zxing_lib/zxing.dart'; // Import zxing_lib
-import 'package:zxing_lib/common.dart'; // Import for HybridBinarizer
+import 'package:image/image.dart' as img;
+import 'package:zxing_lib/zxing.dart';
+import 'package:zxing_lib/common.dart';
+import 'dart:io'; // Diperlukan untuk File jika Anda kembali ke takePicture, tapi tidak untuk stream
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key});
@@ -23,36 +23,30 @@ class PosScreen extends StatefulWidget {
   State<PosScreen> createState() => _PosScreenState();
 }
 
-// CartItem class definition removed, will use the one from models/cart_item.dart
-
 class _PosScreenState extends State<PosScreen> {
   final ProductService _productService = ProductService();
   CameraController? _cameraController;
-  // No specific scanner object needed for zxing_lib as a state variable
   final _skuController = TextEditingController();
   final _cashTenderedController = TextEditingController();
-  final CartService _cartService = CartService(); // Use CartService instance
+  final CartService _cartService = CartService();
 
   List<CameraDescription> _cameras = [];
-  List<Product> _allProducts = []; // To store all products for autocomplete
-  CameraLensDirection?
-      _selectedCameraLensDirection; // Store selected camera's lens direction
+  List<Product> _allProducts = [];
+  CameraLensDirection? _selectedCameraLensDirection;
   bool _isScanning = false;
   bool _isCameraInitialized = false;
   bool _isDetecting = false;
   bool _flashEnabled = false;
   double _cashTendered = 0.0;
   double _change = 0.0;
-  Timer? _scanTimer;
-  bool _selectionJustProcessedByAutocomplete =
-      false; // Flag to prevent double processing
-  int _autocompleteKeyCounter = 0; // For resetting Autocomplete field
+  Timer? _scanTimerWindows;
+  bool _selectionJustProcessedByAutocomplete = false;
+  int _autocompleteKeyCounter = 0;
   final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ');
 
   @override
   void initState() {
     super.initState();
-    // _barcodeScanner = BarcodeScanner(); // Removed ML Kit scanner
     _loadProducts();
   }
 
@@ -66,8 +60,14 @@ class _PosScreenState extends State<PosScreen> {
     try {
       _cameraController = CameraController(
         cameraDescription,
-        ResolutionPreset.low, // Atau bahkan .low jika kualitas masih cukup
+        ResolutionPreset.medium, // medium biasanya cukup baik untuk barcode
         enableAudio: false,
+        // Try bgra8888 for Windows, as yuv420 might not be supported for streaming
+        // For takePicture(), the output is usually JPEG/PNG, so this format group
+        // is more about camera initialization compatibility.
+        imageFormatGroup: Platform.isWindows
+            ? ImageFormatGroup.bgra8888 // A common format, might be more stable for init
+            : ImageFormatGroup.yuv420,  // Good for streaming on mobile
       );
       await _cameraController!.initialize().then((_) async {
         if (!mounted) return;
@@ -101,8 +101,7 @@ class _PosScreenState extends State<PosScreen> {
     _cameraController = null;
     _isCameraInitialized = false;
     _isScanning = false;
-    _scanTimer?.cancel();
-    _scanTimer = null;
+    _scanTimerWindows?.cancel();
     _isDetecting = false;
     _flashEnabled = false;
     if (mounted) {
@@ -132,15 +131,14 @@ class _PosScreenState extends State<PosScreen> {
     if (!mounted) return;
 
     if (_isScanning) {
-      _stopScanning(); // Stop scanning if a product is added via autocomplete
+      _stopScanning();
     }
 
     _cartService.addToCart(product);
     setState(() {
-      _skuController.clear(); // Clear the input field after adding
-      _selectionJustProcessedByAutocomplete =
-          true; // Mark that selection was processed
-      _autocompleteKeyCounter++; // Increment to change Autocomplete key, forcing clear
+      _skuController.clear();
+      _selectionJustProcessedByAutocomplete = true;
+      _autocompleteKeyCounter++;
     });
   }
 
@@ -149,7 +147,7 @@ class _PosScreenState extends State<PosScreen> {
     if (query.isEmpty) return;
 
     if (_isScanning) {
-      _stopScanning(); // Ensure scanning stops if manual entry is used
+      _stopScanning();
     }
 
     try {
@@ -162,7 +160,7 @@ class _PosScreenState extends State<PosScreen> {
         );
         return;
       }
-      _addProductToCart(product); // Use the common method
+      _addProductToCart(product);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -249,8 +247,7 @@ class _PosScreenState extends State<PosScreen> {
       _isCameraInitialized = false;
     });
 
-    _selectedCameraLensDirection =
-        selectedCamera.lensDirection; // Store the lens direction
+    _selectedCameraLensDirection = selectedCamera.lensDirection;
     await _initializeCamera(selectedCamera);
 
     if (_isCameraInitialized &&
@@ -282,120 +279,123 @@ class _PosScreenState extends State<PosScreen> {
     if (!_isCameraInitialized ||
         _cameraController == null ||
         !_cameraController!.value.isInitialized) {
-      log('Camera not initialized or ready, cannot start detection timer');
+      log('Camera not initialized or ready, cannot start detection');
       return;
     }
-    log('Starting barcode detection timer (zxing_lib)');
+
     if (!_isScanning) {
       if (mounted) setState(() => _isScanning = true);
     }
 
-    _scanTimer = Timer.periodic(const Duration(milliseconds: 800), (timer) {
-      if (!_isScanning ||
-          _isDetecting ||
-          _cameraController == null ||
-          !_cameraController!.value.isInitialized) {
-        return;
+    if (Platform.isWindows) {
+      log('Starting barcode detection timer for Windows (takePicture)');
+      _scanTimerWindows = Timer.periodic(const Duration(milliseconds: 1000), (timer) { // Adjust interval as needed
+        if (!_isScanning || _isDetecting || _cameraController == null || !_cameraController!.value.isInitialized) {
+          return;
+        }
+        _detectBarcodeFromTakenPicture();
+      });
+    } else {
+      log('Starting image stream for barcode detection (zxing_lib)');
+      try {
+        _cameraController!.startImageStream(_processCameraImage);
+      } catch (e) {
+        log('Error starting image stream: $e. Falling back to takePicture if applicable or stopping.');
+        // Optionally, you could implement a fallback to takePicture for other platforms too if stream fails
+        // For now, just log and potentially stop or show error.
+        _stopScanning();
+         if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal memulai stream kamera: $e')),
+          );
+        }
       }
-      _detectBarcode();
-    });
+    }
   }
 
   void _stopScanning() {
     log('Stopping scanning');
-    _scanTimer?.cancel();
-    _scanTimer = null;
+    _scanTimerWindows?.cancel();
+    _scanTimerWindows = null;
 
-    if (_cameraController != null) {
-      _cameraController!.dispose().then((_) {
-        log('Camera controller disposed');
-        _cameraController = null;
-        if (mounted) {
-          setState(() {
-            _isScanning = false;
-            _isCameraInitialized = false;
-            _isDetecting = false;
-            _flashEnabled = false;
-          });
-        }
-      }).catchError((Object e) {
-        log('Error disposing camera controller: $e');
-        _cameraController = null;
-        if (mounted) {
-          setState(() {
-            _isScanning = false;
-            _isCameraInitialized = false;
-            _isDetecting = false;
-            _flashEnabled = false;
-          });
-        }
+    Future<void> stopStreamFuture = Future.value();
+    if (_cameraController != null &&
+        _cameraController!.value.isStreamingImages &&
+        !Platform.isWindows) { // Only stop stream if it was started (non-Windows)
+      stopStreamFuture = _cameraController!.stopImageStream().catchError((e) {
+        log('Error stopping image stream: $e');
       });
-    } else {
-      if (mounted) {
-        setState(() {
-          _isScanning = false;
-          _isCameraInitialized = false;
-          _isDetecting = false;
-          _flashEnabled = false;
-        });
-      }
     }
+
+    stopStreamFuture.whenComplete(() {
+      if (_cameraController != null) {
+        _cameraController!.dispose().then((_) {
+          log('Camera controller disposed');
+          _cameraController = null;
+          if (mounted) {
+            setState(() {
+              _isScanning = false;
+              _isCameraInitialized = false;
+              _isDetecting = false;
+              _flashEnabled = false;
+            });
+          }
+        }).catchError((Object e) {
+          log('Error disposing camera controller: $e');
+          _cameraController = null;
+          if (mounted) {
+            setState(() {
+              _isScanning = false;
+              _isCameraInitialized = false;
+              _isDetecting = false;
+              _flashEnabled = false;
+            });
+          }
+        });
+      } else {
+        if (mounted) {
+          setState(() {
+            _isScanning = false;
+            _isCameraInitialized = false;
+            _isDetecting = false;
+            _flashEnabled = false;
+          });
+        }
+      }
+    });
   }
 
-  Future<void> _detectBarcode() async {
-    if (_isDetecting ||
-        !_isScanning ||
-        _cameraController == null ||
-        !_cameraController!.value.isInitialized) {
+  Future<void> _detectBarcodeFromTakenPicture() async {
+    if (_isDetecting || !_isScanning || _cameraController == null || !_cameraController!.value.isInitialized) {
       return;
     }
-
     _isDetecting = true;
-    String imagePath = ''; // Declare imagePath here
+    String imagePath = ''; // Deklarasikan imagePath di sini agar bisa diakses di finally
 
     try {
-      if (_cameraController == null ||
-          !_cameraController!.value.isInitialized ||
-          !_isScanning) {
-        log('Camera not ready or scanning stopped before taking picture');
-        _isDetecting = false; // Reset flag
-        return;
-      }
       final XFile imageFile = await _cameraController!.takePicture();
-      imagePath = imageFile.path; // Assign path for deletion
+      imagePath = imageFile.path; // Tetapkan path di sini
       Uint8List imageBytes = await imageFile.readAsBytes();
-      log('Picture taken, original size: ${imageBytes.lengthInBytes} bytes');
+      log('Windows: Picture taken, size: ${imageBytes.lengthInBytes} bytes');
 
-      // --- Conditionally un-mirror the image if it's from the front camera ---
-      if (_selectedCameraLensDirection == CameraLensDirection.front) {
-        img.Image? decodedImage = img.decodeImage(imageBytes);
-        if (decodedImage != null) {
-          img.Image flippedImage = img.copyFlip(decodedImage,
-              direction: img.FlipDirection.horizontal);
-          imageBytes =
-              Uint8List.fromList(img.encodeJpg(flippedImage, quality: 90));
-          log('Front camera image flipped and re-encoded, new size: ${imageBytes.lengthInBytes} bytes');
-        } else {
-          log('Failed to decode image for flipping (front camera).');
-        }
-      } else {
-        log('Image not flipped (camera lens: $_selectedCameraLensDirection).');
-      }
-      // --- End of image flipping ---
-
-      img.Image? image = img.decodeImage(imageBytes);
-      if (image == null) {
-        log('Failed to decode image for zxing_lib.');
+      img.Image? decodedImage = img.decodeImage(imageBytes);
+      if (decodedImage == null) {
+        log('Windows: Failed to decode image for zxing_lib.');
         _isDetecting = false;
         return;
       }
 
-      // Convert img.Image to ARGB Int32List for zxing_lib
-      final int imageWidth = image.width;
-      final int imageHeight = image.height;
+      if (_selectedCameraLensDirection == CameraLensDirection.front) {
+          img.Image flippedImage = img.copyFlip(decodedImage, direction: img.FlipDirection.horizontal);
+          decodedImage = flippedImage;
+          log('Windows: Front camera image flipped.');
+      }
+
+      final int imageWidth = decodedImage.width;
+      final int imageHeight = decodedImage.height;
       final Int32List argbInts = Int32List(imageWidth * imageHeight);
       int i = 0;
-      for (final pixel in image) {
+      for (final pixel in decodedImage) {
         int r = pixel.r.toInt();
         int g = pixel.g.toInt();
         int b = pixel.b.toInt();
@@ -403,55 +403,157 @@ class _PosScreenState extends State<PosScreen> {
         argbInts[i++] = (a << 24) | (r << 16) | (g << 8) | b;
       }
 
-      final LuminanceSource source =
-          RGBLuminanceSource(imageWidth, imageHeight, argbInts);
+      final LuminanceSource source = RGBLuminanceSource(imageWidth, imageHeight, argbInts);
       final BinaryBitmap bitmap = BinaryBitmap(HybridBinarizer(source));
       final MultiFormatReader reader = MultiFormatReader();
-      // Optional: Add hints for expected formats to speed up processing
-      // reader.setHints({
-      //   DecodeHintType.POSSIBLE_FORMATS: [BarcodeFormat.QR_CODE, BarcodeFormat.CODE_128, BarcodeFormat.EAN_13],
-      //   // DecodeHintType.TRY_HARDER: true, // Can be added if needed
-      // });
-
-      log('zxing_lib: Attempting to decode barcode...');
       Result? zxingResult;
+
       try {
         zxingResult = reader.decode(bitmap);
       } on NotFoundException {
-        log('zxing_lib: No barcode found in this frame.');
+        // Barcode tidak ditemukan, ini normal
       } catch (e) {
-        log('zxing_lib: Error during decoding: $e');
+        log('Windows (zxing_lib): Error during decoding: $e');
       }
 
       if (zxingResult != null && zxingResult.text.isNotEmpty && _isScanning) {
-        log('Barcode detected (zxing_lib): ${zxingResult.text}');
+        log('Barcode detected (Windows - takePicture): ${zxingResult.text}');
+
         if (mounted && Navigator.of(context, rootNavigator: true).canPop()) {
           Navigator.of(context, rootNavigator: true).pop();
         }
         _stopScanning();
+
         if (mounted) {
           setState(() {
             _skuController.text = zxingResult!.text;
           });
+          await _addProductToCartBySku();
         }
-        await _addProductToCartBySku(); // This now handles SKU and name
       }
-    } catch (e) {
-      log('Error detecting barcode: $e');
+    } catch (e, stacktrace) {
+      log('Error detecting barcode from taken picture (Windows): $e\n$stacktrace');
     } finally {
-      _isDetecting = false;
-      // Attempt to delete the temporary image file
-      if (imagePath.isNotEmpty) { // Check if imagePath was assigned
+      // Hapus file gambar sementara setelah selesai diproses atau jika terjadi error
+      if (imagePath.isNotEmpty) { // Pastikan imagePath sudah diisi
         try {
-          final file = File(imagePath);
-          if (await file.exists()) {
-            await file.delete();
-            log('Temporary image file deleted: $imagePath');
+          final fileToDelete = File(imagePath);
+          if (await fileToDelete.exists()) {
+            await fileToDelete.delete();
+            log('Windows: Temporary image file deleted: $imagePath');
           }
         } catch (e) {
-          log('Error deleting temporary image file $imagePath: $e');
+          log('Windows: Error deleting temporary image file $imagePath: $e');
         }
       }
+      _isDetecting = false;
+    }
+  }
+
+  Future<void> _processCameraImage(CameraImage image) async { // This is for non-Windows (stream)
+    if (_isDetecting ||
+        !_isScanning ||
+        _cameraController == null ||
+        !_cameraController!.value.isInitialized) {
+      return;
+    }
+    _isDetecting = true;
+
+    try {
+      final camera = _cameraController!.description;
+      final deviceOrientation = _cameraController!.value.deviceOrientation;
+
+      final orientations = {
+        DeviceOrientation.portraitUp: 0,
+        DeviceOrientation.landscapeLeft: 90,
+        DeviceOrientation.portraitDown: 180,
+        DeviceOrientation.landscapeRight: 270,
+      };
+      int deviceOrientationDegrees = orientations[deviceOrientation] ?? 0;
+      int rotationCompensation;
+
+      if (camera.lensDirection == CameraLensDirection.front) {
+        rotationCompensation =
+            (camera.sensorOrientation + deviceOrientationDegrees) % 360;
+      } else {
+        rotationCompensation =
+            (camera.sensorOrientation - deviceOrientationDegrees + 360) % 360;
+      }
+
+      if (image.planes.isEmpty || image.planes[0].bytes.isEmpty) {
+        log('Stream: Image planes are empty or Y-plane bytes are empty.');
+        _isDetecting = false;
+        return;
+      }
+      final yPlane = image.planes[0];
+
+      if (image.width <= 0 || image.height <= 0) {
+          log('Stream: Invalid image dimensions: width=${image.width}, height=${image.height}');
+          _isDetecting = false;
+          return;
+      }
+
+      bool reverseHorizontal =
+          (camera.lensDirection == CameraLensDirection.front);
+
+      LuminanceSource source = PlanarYUVLuminanceSource(
+        yPlane.bytes,
+        image.width,
+        image.height,
+        left: 0,
+        top: 0,
+        width: image.width,
+        height: image.height,
+        isReverseHorizontal: reverseHorizontal,
+      );
+
+      if (rotationCompensation == 90) {
+        source = source.rotateCounterClockwise();
+      } else if (rotationCompensation == 180) {
+        source = source.rotateCounterClockwise().rotateCounterClockwise();
+      } else if (rotationCompensation == 270) {
+        source = source.rotateCounterClockwise()
+            .rotateCounterClockwise()
+            .rotateCounterClockwise();
+      }
+
+      final bitmap = BinaryBitmap(HybridBinarizer(source));
+      final MultiFormatReader reader = MultiFormatReader();
+      Result? zxingResult;
+
+      try {
+        zxingResult = reader.decode(bitmap);
+      } on NotFoundException {
+        // Barcode tidak ditemukan, ini normal
+      } catch (e) {
+        log('Stream (zxing_lib): Error during decoding: $e');
+      }
+
+      if (zxingResult != null && zxingResult.text.isNotEmpty && _isScanning) {
+        log('Barcode detected (zxing_lib stream): ${zxingResult.text}');
+
+        if (_cameraController != null && _cameraController!.value.isStreamingImages && !Platform.isWindows) {
+            await _cameraController!.stopImageStream().catchError((e) {
+                log('Error stopping image stream after detection: $e');
+            });
+        }
+
+        if (mounted && Navigator.of(context, rootNavigator: true).canPop()) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+        _stopScanning();
+
+        if (mounted) {
+          setState(() {
+            _skuController.text = zxingResult!.text;
+          });
+          await _addProductToCartBySku();
+        }
+      }
+    } catch (e, stacktrace) {
+      log('Error processing camera image for barcode (stream): $e\n$stacktrace');
+    } finally {
+      _isDetecting = false;
     }
   }
 
@@ -661,7 +763,9 @@ class _PosScreenState extends State<PosScreen> {
                   child: IconButton(
                     icon: const Icon(Icons.close, color: Colors.white),
                     onPressed: () {
-                      Navigator.pop(context);
+                      if (Navigator.of(context, rootNavigator: true).canPop()) {
+                         Navigator.of(context, rootNavigator: true).pop();
+                      }
                       _stopScanning();
                     },
                     tooltip: 'Tutup scanner',
@@ -720,8 +824,7 @@ class _PosScreenState extends State<PosScreen> {
     setState(() {});
   }
 
-  double _calculateTotal() =>
-      _cartService.calculateTotal(); // Use CartService
+  double _calculateTotal() => _cartService.calculateTotal();
 
   void _updateChange() {
     final total = _calculateTotal();
@@ -733,7 +836,7 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   Future<void> _handleCheckout() async {
-    if (_cartService.getCartItems().isEmpty) { // Use CartService
+    if (_cartService.getCartItems().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Keranjang masih kosong')),
       );
@@ -749,23 +852,21 @@ class _PosScreenState extends State<PosScreen> {
     }
 
     try {
-      // Record the transaction and its items, and update stock
-      final int transactionId = await _productService.recordTransaction( // This is the DB transaction ID
-        totalPrice: total, // Diubah dari totalAmount
-        date: DateTime.now(), // Diubah dari transactionTime
-        items: _cartService.getCartItems(), // Send items from CartService
+      final int transactionId = await _productService.recordTransaction(
+        totalPrice: total,
+        date: DateTime.now(),
+        items: _cartService.getCartItems(),
       );
 
       if (transactionId <= 0) {
-        // Check if transaction was recorded successfully
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Gagal mencatat transaksi.')));
         return;
       }
 
-      // Create a copy of cart items for the receipt *before* clearing the main cart
-      final List<CartItem> itemsForReceipt = List.from(_cartService.getCartItems()); // Get items from service
+      final List<CartItem> itemsForReceipt =
+          List.from(_cartService.getCartItems());
       final DateTime receiptTransactionTime = DateTime.now();
 
       if (!mounted) return;
@@ -773,17 +874,17 @@ class _PosScreenState extends State<PosScreen> {
         context,
         MaterialPageRoute(
           builder: (_) => ReceiptScreen(
-            cartItems: itemsForReceipt, // Use the copied list
+            cartItems: itemsForReceipt,
             totalPrice: total,
             cashTendered: _cashTendered,
             change: _change,
             transactionTime: receiptTransactionTime,
-            transactionDbId: transactionId, // Pass the DB transaction ID
+            transactionDbId: transactionId,
           ),
         ),
       );
 
-      _cartService.clearCart(); // Clear cart via service
+      _cartService.clearCart();
       setState(() {
         _cashTenderedController.clear();
         _cashTendered = 0;
@@ -798,7 +899,7 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   void _confirmClearCart() async {
-    if (_cartService.getCartItems().isEmpty) { // Use CartService
+    if (_cartService.getCartItems().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Keranjang sudah kosong.')),
       );
@@ -826,7 +927,7 @@ class _PosScreenState extends State<PosScreen> {
     );
 
     if (confirm == true) {
-      _cartService.clearCart(); // Clear cart via service
+      _cartService.clearCart();
       setState(() {
         _cashTenderedController.clear();
         _cashTendered = 0.0;
@@ -837,8 +938,12 @@ class _PosScreenState extends State<PosScreen> {
 
   @override
   void dispose() {
-    _scanTimer?.cancel();
-    _cameraController?.dispose();
+    _scanTimerWindows?.cancel();
+    if (_isScanning || _cameraController != null) {
+       _stopScanning();
+    } else {
+      _cameraController?.dispose();
+    }
     _skuController.dispose();
     _cashTenderedController.dispose();
     super.dispose();
@@ -855,10 +960,10 @@ class _PosScreenState extends State<PosScreen> {
           IconButton(
             icon: const Icon(Icons.remove_shopping_cart_outlined),
             tooltip: 'Bersihkan Keranjang',
-            onPressed: _cartService.getCartItems().isNotEmpty // Use CartService
+            onPressed: _cartService.getCartItems().isNotEmpty
                 ? _confirmClearCart
-                : null, // Disable if cart is empty
-            color: _cartService.getCartItems().isNotEmpty // Use CartService
+                : null,
+            color: _cartService.getCartItems().isNotEmpty
                 ? Colors.white
                 : Colors.white.withAlpha(150),
           ),
@@ -885,30 +990,27 @@ class _PosScreenState extends State<PosScreen> {
               children: [
                 Expanded(
                   child: Autocomplete<Product>(
-                    key: ValueKey(_autocompleteKeyCounter), // Added key for resetting
-                    // Parameter textEditingController dihapus karena tidak valid
+                    key: ValueKey(_autocompleteKeyCounter),
                     optionsBuilder: (TextEditingValue textEditingValue) {
                       if (textEditingValue.text.isEmpty) {
                         return const Iterable<Product>.empty();
                       }
                       final query = textEditingValue.text.toLowerCase();
-                      // Filter only by SKU for suggestions
                       return _allProducts.where((Product product) =>
-                          product.sku.toLowerCase().contains(query));
+                          product.sku.toLowerCase().contains(query) ||
+                          product.name.toLowerCase().contains(query));
                     },
-                    displayStringForOption: (Product option) => option
-                        .sku, // Display only SKU or SKU + Name as preferred
+                    displayStringForOption: (Product option) =>
+                        '${option.sku} - ${option.name}',
                     fieldViewBuilder: (BuildContext context,
                         TextEditingController fieldTextEditingController,
                         FocusNode fieldFocusNode,
                         VoidCallback onFieldSubmitted) {
-                      // TextField ini menggunakan fieldTextEditingController yang disediakan oleh Autocomplete
-                      // agar saran dapat muncul dengan benar.
                       return TextField(
                         controller: fieldTextEditingController,
                         focusNode: fieldFocusNode,
                         decoration: InputDecoration(
-                          labelText: 'Masukkan Kode Barang (SKU)',
+                          labelText: 'Kode Barang (SKU) / Nama',
                           prefixIcon: const Icon(Icons.search),
                           border: const OutlineInputBorder(),
                           contentPadding: const EdgeInsets.symmetric(
@@ -918,27 +1020,21 @@ class _PosScreenState extends State<PosScreen> {
                                   icon: const Icon(Icons.clear),
                                   onPressed: () {
                                     fieldTextEditingController.clear();
+                                    _skuController.clear(); // Sync with _skuController
                                   },
                                 )
                               : null,
                         ),
                         onChanged: (currentTextInAutocompleteField) {
-                          // Sync the text to _skuController so "Tambah" button can read it
                           _skuController.text = currentTextInAutocompleteField;
-                          // Rebuild to show/hide clear button
                           (context as Element).markNeedsBuild();
                         },
                         onSubmitted: (String submittedText) {
-                          onFieldSubmitted(); // Panggil handler internal Autocomplete
-
+                          onFieldSubmitted();
                           if (_selectionJustProcessedByAutocomplete) {
-                            _selectionJustProcessedByAutocomplete =
-                                false; // Reset flag
-                            // _skuController already cleared by _addProductToCart
-                            // fieldTextEditingController now holds displayString, which is fine for visual feedback
-                            return; // Do not reprocess if onSelected handled it
+                            _selectionJustProcessedByAutocomplete = false;
+                            return;
                           }
-                          // If not handled by onSelected, process the text as a direct query
                           _skuController.text = fieldTextEditingController.text;
                           _addProductToCartBySku();
                         },
@@ -978,7 +1074,7 @@ class _PosScreenState extends State<PosScreen> {
             ),
           ),
           Expanded(
-            child: _cartService.getCartItems().isEmpty // Use CartService
+            child: _cartService.getCartItems().isEmpty
                 ? const Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -1007,11 +1103,11 @@ class _PosScreenState extends State<PosScreen> {
                     ),
                   )
                 : ListView.separated(
-                    itemCount: _cartService.getCartItems().length, // Use CartService
+                    itemCount: _cartService.getCartItems().length,
                     separatorBuilder: (context, index) =>
                         const Divider(height: 1),
                     itemBuilder: (context, index) {
-                      final item = _cartService.getCartItems()[index]; // Use CartService
+                      final item = _cartService.getCartItems()[index];
                       return Container(
                         padding: const EdgeInsets.symmetric(
                             vertical: 8, horizontal: 16),
@@ -1141,12 +1237,11 @@ class _PosScreenState extends State<PosScreen> {
                             icon: const Icon(Icons.clear),
                             onPressed: () {
                               _cashTenderedController.clear();
-                              _updateChange(); // Also updates the state
+                              _updateChange();
                             },
                           )
                         : null,
                   ),
-                  // onChanged will trigger _updateChange which calls setState, rebuilding the suffixIcon
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   onChanged: (_) => _updateChange(),
@@ -1182,10 +1277,10 @@ class _PosScreenState extends State<PosScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    onPressed:
-                        _cartService.getCartItems().isEmpty || _cashTendered < _calculateTotal() // Use CartService
-                            ? null
-                            : _handleCheckout,
+                    onPressed: _cartService.getCartItems().isEmpty ||
+                            _cashTendered < _calculateTotal()
+                        ? null
+                        : _handleCheckout,
                     child: const Text(
                       'BAYAR',
                       style: TextStyle(
@@ -1210,9 +1305,7 @@ IconData _getCameraLensIcon(CameraLensDirection direction) {
       return Icons.camera_front;
     case CameraLensDirection.back:
       return Icons.camera_rear;
-    case CameraLensDirection.external: // Assuming external is a possibility
+    case CameraLensDirection.external:
       return Icons.videocam;
-    // No default needed as the switch is now exhaustive for all known enum members.
-    // The Dart analyzer will ensure exhaustiveness if CameraLensDirection changes.
   }
 }
