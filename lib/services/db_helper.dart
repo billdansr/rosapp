@@ -1,5 +1,6 @@
 import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // Menggunakan sqflite_common_ffi
 import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart'; // Import path_provider
 
 class DBHelper {
   static Database? _database;
@@ -13,10 +14,18 @@ class DBHelper {
   }
 
   static Future<Database> _initDB() async {
-    sqfliteFfiInit(); // Inisialisasi FFI
-    var databaseFactory = databaseFactoryFfi;
-    String path = join(await databaseFactory.getDatabasesPath(), dbName);
-    return await databaseFactory.openDatabase(
+    // FFI initialization (sqfliteFfiInit() and databaseFactory = databaseFactoryFfi;)
+    // should be done once globally, e.g., in your main.dart before runApp().
+    // Example for main.dart:
+    // void main() async { // Make main async if using await before runApp
+    //   WidgetsFlutterBinding.ensureInitialized(); // Ensure bindings are initialized
+    //   sqfliteFfiInit();
+    //   databaseFactory = databaseFactoryFfi;
+    //   runApp(MyApp());
+    // }
+    final documentsDirectory = await getApplicationSupportDirectory(); // Use path_provider
+    String path = join(documentsDirectory.path, dbName);
+    return await databaseFactoryFfi.openDatabase( // Use databaseFactoryFfi directly
       path,
       options: OpenDatabaseOptions(
         version: dbVersion,
@@ -137,13 +146,14 @@ class DBHelper {
   static Future<List<Map<String, dynamic>>> getPurchasesWithDetailsForPeriod(DateTime startDate, DateTime endDate) async {
     final db = await database;
     final String start = startDate.toIso8601String();
-    final String end = endDate.toIso8601String(); // Pastikan endDate mencakup keseluruhan hari jika perlu
+    // Adjust endDate to include the entire day for consistent period queries
+    final String end = DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59, 999).toIso8601String();
     return await db.rawQuery('''
         SELECT p.*, pr.name as product_name 
         FROM purchases p
         JOIN products pr ON p.product_id = pr.id
         WHERE p.purchase_date BETWEEN ? AND ?
-        ORDER BY p.purchase_date DESC
+        ORDER BY p.purchase_date DESC, p.id DESC
     ''', [start, end]);
   }
 
@@ -155,7 +165,7 @@ class DBHelper {
     final String end = DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59, 999).toIso8601String();
     
     String query = 'SELECT * FROM transactions WHERE date BETWEEN ? AND ? ORDER BY date DESC';
-    if (limit != null) {
+    if (limit != null && limit > 0) { // Added check for limit > 0
       query += ' LIMIT $limit';
     }
     return await db.rawQuery(query, [start, end]);

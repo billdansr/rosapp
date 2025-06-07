@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'screens/sales_report_screen.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-void main() {
-  sqfliteFfiInit(); // Initialize sqflite with FFI support
+void main() async {
+  // Ensure Flutter bindings are initialized if you use await before runApp
+  WidgetsFlutterBinding.ensureInitialized();
 
+  // Initialize FFI for sqflite on desktop (and other platforms if using FFI)
+  sqfliteFfiInit(); // Initialize sqflite with FFI support
   databaseFactory = databaseFactoryFfi; // Use FFI database factory
 
   runApp(const MyApp());
