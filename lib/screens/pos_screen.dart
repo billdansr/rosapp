@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:intl/intl.dart';
@@ -349,6 +351,7 @@ class _PosScreenState extends State<PosScreen> {
     }
 
     _isDetecting = true;
+    String imagePath = ''; // Declare imagePath here
 
     try {
       if (_cameraController == null ||
@@ -359,6 +362,7 @@ class _PosScreenState extends State<PosScreen> {
         return;
       }
       final XFile imageFile = await _cameraController!.takePicture();
+      imagePath = imageFile.path; // Assign path for deletion
       Uint8List imageBytes = await imageFile.readAsBytes();
       log('Picture taken, original size: ${imageBytes.lengthInBytes} bytes');
 
@@ -436,6 +440,18 @@ class _PosScreenState extends State<PosScreen> {
       log('Error detecting barcode: $e');
     } finally {
       _isDetecting = false;
+      // Attempt to delete the temporary image file
+      if (imagePath.isNotEmpty) { // Check if imagePath was assigned
+        try {
+          final file = File(imagePath);
+          if (await file.exists()) {
+            await file.delete();
+            log('Temporary image file deleted: $imagePath');
+          }
+        } catch (e) {
+          log('Error deleting temporary image file $imagePath: $e');
+        }
+      }
     }
   }
 
