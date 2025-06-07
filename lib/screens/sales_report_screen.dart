@@ -5,6 +5,13 @@ import 'package:rosapp/models/transaction_detail.dart';
 import 'package:rosapp/models/purchase_detail.dart'; // Tambahkan import ini
 import 'package:rosapp/services/product_service.dart';
 import 'package:rosapp/widgets/app_drawer.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:excel/excel.dart' hide Border; // Sembunyikan Border dari paket excel
+import 'dart:io'; // Untuk File
+import 'package:open_filex/open_filex.dart'; // Untuk membuka file
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 
 class SalesReportScreen extends StatefulWidget {
@@ -15,6 +22,7 @@ class SalesReportScreen extends StatefulWidget {
 }
 
 enum ReportFilterType { daily, monthly, yearly, range }
+enum ExportFormat { excel, pdf }
 
 // Helper function (optional, could be part of the class or a utility file)
 // String filterTypeToString(ReportFilterType filterType) {
@@ -42,6 +50,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
   List<TransactionDetail> _recentTransactions = [];
   double _estimatedProfitForPeriod = 0.0;
   List<FlSpot> _salesChartData = [];
+  List<TransactionDetail> _transactionsForPeriodReport = []; // Semua transaksi untuk periode laporan
   List<PurchaseDetail> _purchasesForPeriodReport = []; // State baru untuk detail pembelian
 
   @override
@@ -98,6 +107,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
       final recent = await _productService.getRecentTransactions(limit: 5);
       final chartDataRaw = await _productService.getDailySalesForChart(startDate, endDate);
       final purchasesReport = await _productService.getPurchasesForPeriodReport(startDate, endDate); // Ambil data pembelian
+      final transactionsForReport = await _productService.getTransactionsForPeriod(startDate, endDate); // Ambil SEMUA transaksi untuk periode laporan
 
       List<FlSpot> chartSpots = [];
       if (chartDataRaw.isNotEmpty) {
@@ -149,12 +159,257 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
         _estimatedProfitForPeriod = salesForPeriod - cogsForPeriod;
         _salesChartData = chartSpots;
         _purchasesForPeriodReport = purchasesReport; // Simpan data pembelian
+        _transactionsForPeriodReport = transactionsForReport; // Simpan semua transaksi untuk laporan
         _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memuat data laporan: $e')));
+    }
+  }
+
+  Future<void> _exportReport(ExportFormat format) async {
+    if (!Platform.isWindows) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fitur ekspor saat ini hanya tersedia untuk Windows.')));
+      return;
+    }
+
+    // On Windows, apps typically have write access to their application documents directory.
+    // The permission_handler's `Permission.storage` is not applicable/needed in the same way as on mobile
+    // for getApplicationDocumentsDirectory().
+    // If targeting user-selectable directories (e.g., "Downloads"), a file picker (like file_selector)
+    // would be more appropriate and handles permissions implicitly.
+    // For getApplicationDocumentsDirectory() on Windows, permission is assumed.
+
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final path = directory.path;
+      final String periodStr = _getPeriodTitle('').replaceAll(RegExp(r'[^\w\s]+'),'').replaceAll(' ', '_').toLowerCase();
+      final fileName = 'laporan_penjualan_${periodStr}_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}';
+
+      if (format == ExportFormat.excel) {
+        await _generateExcelReport('$path/$fileName.xlsx');
+      } else if (format == ExportFormat.pdf) {
+        await _generatePdfReport('$path/$fileName.pdf');
+      }
+    } catch (e) {
+      debugPrint('Error during export: $e');
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal mengekspor laporan: $e')));
+    }
+  }
+
+  Future<void> _generateExcelReport(String filePath) async {
+    var excel = Excel.createExcel();
+    Sheet sheetObject = excel['Laporan Penjualan'];
+    excel.setDefaultSheet(sheetObject.sheetName);
+
+    // Header Laporan
+    sheetObject.appendRow([TextCellValue('Laporan Penjualan')]);
+    sheetObject.merge(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0), CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 0));
+    sheetObject.appendRow([TextCellValue(_getPeriodTitle('Periode'))]);
+    sheetObject.merge(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1), CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: 1));
+    sheetObject.appendRow([]); // Baris kosong
+
+    // Ringkasan
+    sheetObject.appendRow([TextCellValue('Ringkasan Laporan')]);
+    sheetObject.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: sheetObject.maxRows -1 )).cellStyle = CellStyle(bold: true);
+    sheetObject.appendRow([TextCellValue('Total Penjualan (Semua Waktu)'), TextCellValue(currencyFormatter.format(_totalSalesAllTime))]);
+    sheetObject.appendRow([TextCellValue(_getPeriodTitle('Penjualan Periode Ini')), TextCellValue(currencyFormatter.format(_totalSalesForPeriod))]);
+    sheetObject.appendRow([TextCellValue(_getPeriodTitle('Jumlah Transaksi')), TextCellValue(_transactionsForPeriodCount.toString())]);
+    sheetObject.appendRow([TextCellValue(_getPeriodTitle('Total Pembelian')), TextCellValue(currencyFormatter.format(_totalPurchasesForPeriod))]);
+    sheetObject.appendRow([TextCellValue(_getPeriodTitle('Estimasi HPP')), TextCellValue(currencyFormatter.format(_estimatedCogsForPeriod))]);
+    sheetObject.appendRow([TextCellValue(_getPeriodTitle('Estimasi Laba Kotor')), TextCellValue(currencyFormatter.format(_estimatedProfitForPeriod))]);
+    sheetObject.appendRow([]); // Baris kosong
+
+    // Detail Pembelian
+    if (_purchasesForPeriodReport.isNotEmpty) {
+      sheetObject.appendRow([TextCellValue('Detail Pembelian dari Supplier')]);
+      sheetObject.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: sheetObject.maxRows -1 )).cellStyle = CellStyle(bold: true);
+      sheetObject.appendRow([
+        TextCellValue('Tanggal'),
+        TextCellValue('Nama Produk'),
+        TextCellValue('Supplier'),
+        TextCellValue('Jumlah'),
+        TextCellValue('Harga Beli/Unit'),
+        TextCellValue('Total Biaya')
+      ]);
+      // Style header tabel
+      for (var i = 0; i < 6; i++) {
+        sheetObject.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: sheetObject.maxRows -1 )).cellStyle = CellStyle(bold: true, backgroundColorHex: ExcelColor.fromHexString('#D3D3D3'));
+      }
+
+      for (var purchase in _purchasesForPeriodReport) {
+        sheetObject.appendRow([
+          TextCellValue(DateFormat('dd MMM yyyy').format(purchase.purchaseDate)),
+          TextCellValue(purchase.productName),
+          TextCellValue(purchase.supplierName ?? '-'),
+          IntCellValue(purchase.quantityPurchased),
+          DoubleCellValue(purchase.purchasePricePerUnit),
+          DoubleCellValue(purchase.totalCost)
+        ]);
+      }
+      sheetObject.appendRow([]); // Baris kosong
+    }
+
+    // Detail Transaksi
+    if (_transactionsForPeriodReport.isNotEmpty) {
+      sheetObject.appendRow([TextCellValue(_getPeriodTitle('Detail Transaksi Periode Ini'))]);
+      sheetObject.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: sheetObject.maxRows -1 )).cellStyle = CellStyle(bold: true);
+      sheetObject.appendRow([TextCellValue('Tanggal & Waktu'), TextCellValue('Total Transaksi')]);
+      sheetObject.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: sheetObject.maxRows -1 )).cellStyle = CellStyle(bold: true, backgroundColorHex: ExcelColor.fromHexString('#D3D3D3'));
+      sheetObject.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: sheetObject.maxRows -1 )).cellStyle = CellStyle(bold: true, backgroundColorHex: ExcelColor.fromHexString('#D3D3D3'));
+      for (var tx in _transactionsForPeriodReport) {
+        sheetObject.appendRow([
+          TextCellValue(dateTimeFormatter.format(tx.date)),
+          DoubleCellValue(tx.totalPrice)
+        ]);
+      }
+    }
+
+    // Simpan file
+    var fileBytes = excel.save();
+    File(filePath)
+      ..createSync(recursive: true)
+      ..writeAsBytesSync(fileBytes!);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Laporan disimpan di: $filePath'),
+          action: SnackBarAction(
+            label: 'Buka',
+            onPressed: () => OpenFilex.open(filePath),
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _generatePdfReport(String filePath) async {
+    final pdf = pw.Document();
+    final baseFont = await pw.Font.helvetica(); // Pastikan Anda memiliki font ini di assets
+    final boldFont = await pw.Font.helveticaBold(); // Atau gunakan pw.Font.helveticaBold() dll.
+
+    final baseStyle = pw.TextStyle(font: baseFont, fontSize: 10);
+    final boldStyle = pw.TextStyle(font: boldFont, fontSize: 10);
+    final headerStyle = pw.TextStyle(font: boldFont, fontSize: 16);
+    final subHeaderStyle = pw.TextStyle(font: boldFont, fontSize: 12);
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        header: (pw.Context context) {
+          return pw.Container(
+            alignment: pw.Alignment.centerRight,
+            margin: const pw.EdgeInsets.only(bottom: 3.0 * PdfPageFormat.mm),
+            child: pw.Text(
+              'Laporan Penjualan - RosApp',
+              style: baseStyle.copyWith(color: PdfColors.grey),
+            ),
+          );
+        },
+        footer: (pw.Context context) {
+          return pw.Container(
+            alignment: pw.Alignment.centerRight,
+            margin: const pw.EdgeInsets.only(top: 1.0 * PdfPageFormat.cm),
+            child: pw.Text(
+              'Halaman ${context.pageNumber} dari ${context.pagesCount}',
+              style: baseStyle.copyWith(color: PdfColors.grey),
+            ),
+          );
+        },
+        build: (pw.Context context) => <pw.Widget>[
+          pw.Header(
+            level: 0,
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: <pw.Widget>[
+                pw.Text('Laporan Penjualan', style: headerStyle),
+                pw.Text(_getPeriodTitle('Periode'), style: baseStyle.copyWith(fontSize: 11)),
+                pw.SizedBox(height: 20),
+              ]
+            )
+          ),
+          pw.Header(level: 1, text: 'Ringkasan Laporan', textStyle: subHeaderStyle),
+          pw.TableHelper.fromTextArray(
+            context: context,
+            cellAlignment: pw.Alignment.centerLeft,
+            cellStyle: baseStyle,
+            data: <List<String>>[
+              ['Total Penjualan (Semua Waktu):', currencyFormatter.format(_totalSalesAllTime)],
+              [_getPeriodTitle('Penjualan Periode Ini:'), currencyFormatter.format(_totalSalesForPeriod)],
+              [_getPeriodTitle('Jumlah Transaksi:'), _transactionsForPeriodCount.toString()],
+              [_getPeriodTitle('Total Pembelian:'), currencyFormatter.format(_totalPurchasesForPeriod)],
+              [_getPeriodTitle('Estimasi HPP:'), currencyFormatter.format(_estimatedCogsForPeriod)],
+              [_getPeriodTitle('Estimasi Laba Kotor:'), currencyFormatter.format(_estimatedProfitForPeriod)],
+            ],
+            columnWidths: {
+              0: const pw.FlexColumnWidth(2),
+              1: const pw.FlexColumnWidth(1.5),
+            },
+            border: null,
+          ),
+          pw.SizedBox(height: 20),
+          if (_purchasesForPeriodReport.isNotEmpty) ...[
+            pw.Header(level: 1, text: 'Detail Pembelian dari Supplier', textStyle: subHeaderStyle),
+            pw.Table.fromTextArray(
+              context: context,
+              headerStyle: boldStyle,
+              cellStyle: baseStyle,
+              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+              cellAlignment: pw.Alignment.centerLeft,
+              cellAlignments: { 3: pw.Alignment.centerRight, 4: pw.Alignment.centerRight, 5: pw.Alignment.centerRight },
+              data: <List<String>>[
+                <String>['Tanggal', 'Nama Produk', 'Supplier', 'Jumlah', 'Harga Beli/Unit', 'Total Biaya'],
+                ..._purchasesForPeriodReport.map((p) => [
+                      DateFormat('dd MMM yy').format(p.purchaseDate),
+                      p.productName,
+                      p.supplierName ?? '-',
+                      p.quantityPurchased.toString(),
+                      currencyFormatter.format(p.purchasePricePerUnit),
+                      currencyFormatter.format(p.totalCost),
+                    ]),
+              ],
+            ),
+            pw.SizedBox(height: 20),
+          ],
+          if (_transactionsForPeriodReport.isNotEmpty) ...[
+            pw.Header(level: 1, text: _getPeriodTitle('Detail Transaksi Periode Ini'), textStyle: subHeaderStyle),
+             pw.Table.fromTextArray(
+              context: context,
+              headerStyle: boldStyle,
+              cellStyle: baseStyle,
+              headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
+              cellAlignment: pw.Alignment.centerLeft,
+              cellAlignments: {1: pw.Alignment.centerRight},
+              data: <List<String>>[
+                <String>['Tanggal & Waktu', 'Total Transaksi'],
+                ..._transactionsForPeriodReport.map((tx) => [
+                      dateTimeFormatter.format(tx.date),
+                      currencyFormatter.format(tx.totalPrice),
+                    ]),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+
+    final file = File(filePath);
+    await file.writeAsBytes(await pdf.save());
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Laporan PDF disimpan di: $filePath'),
+          action: SnackBarAction(
+            label: 'Buka',
+            onPressed: () => OpenFilex.open(filePath),
+          ),
+        ),
+      );
     }
   }
 
@@ -231,6 +486,26 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
         title: const Text('Laporan Penjualan'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
+        actions: [
+          PopupMenuButton<ExportFormat>(
+            icon: const Icon(Icons.file_download),
+            tooltip: 'Ekspor Laporan',
+            onSelected: (ExportFormat result) {
+              _exportReport(result);
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<ExportFormat>>[
+              const PopupMenuItem<ExportFormat>(
+                value: ExportFormat.excel,
+                child: ListTile(leading: Icon(Icons.table_chart_outlined), title: Text('Excel (.xlsx)')),
+              ),
+              const PopupMenuItem<ExportFormat>(
+                value: ExportFormat.pdf,
+                child: ListTile(leading: Icon(Icons.picture_as_pdf_outlined), title: Text('PDF (.pdf)')),
+              ),
+            ],
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       drawer: const AppDrawer(),
       body: _isLoading

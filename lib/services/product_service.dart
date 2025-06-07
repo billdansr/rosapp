@@ -335,4 +335,15 @@ class ProductService {
       return PurchaseDetail.fromMap(maps[i]);
     });
   }
+
+  Future<List<TransactionDetail>> getTransactionsForPeriod(DateTime startDate, DateTime endDate, {int? limit}) async {
+    final List<Map<String, dynamic>> maps = await DBHelper.getRawTransactionsForPeriod(startDate, endDate, limit: limit);
+    return List.generate(maps.length, (i) {
+      return TransactionDetail(
+        id: maps[i]['id'],
+        date: DateTime.parse(maps[i]['date']),
+        totalPrice: maps[i]['total_price'],
+      );
+    });
+  }
 }

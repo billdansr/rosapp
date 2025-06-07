@@ -146,4 +146,18 @@ class DBHelper {
         ORDER BY p.purchase_date DESC
     ''', [start, end]);
   }
+
+  // Mengambil transaksi untuk periode tertentu dengan limit opsional
+  static Future<List<Map<String, dynamic>>> getRawTransactionsForPeriod(DateTime startDate, DateTime endDate, {int? limit}) async {
+    final db = await database;
+    final String start = startDate.toIso8601String();
+    // Adjust endDate to include the entire day
+    final String end = DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59, 999).toIso8601String();
+    
+    String query = 'SELECT * FROM transactions WHERE date BETWEEN ? AND ? ORDER BY date DESC';
+    if (limit != null) {
+      query += ' LIMIT $limit';
+    }
+    return await db.rawQuery(query, [start, end]);
+  }
 }
