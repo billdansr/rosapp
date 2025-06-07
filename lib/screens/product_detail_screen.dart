@@ -32,7 +32,7 @@ class ProductDetailScreen extends StatelessWidget {
     if (confirm == true) {
       await ProductService().deleteProduct(product.id!);
       if (context.mounted) {
-        Navigator.pop(context); // Back to list
+        Navigator.pop(context, true); // Back to list, signal refresh
       }
     }
   }
