@@ -136,7 +136,7 @@ class _RecordPurchaseScreenState extends State<RecordPurchaseScreen> {
                   return _allProducts.where((Product product) {
                     final query = textEditingValue.text.toLowerCase();
                     return product.name.toLowerCase().contains(query) ||
-                           product.sku.toLowerCase().contains(query);
+                      product.sku.toLowerCase().contains(query);
                   });
                 },
                 onSelected: (Product selection) {
@@ -190,11 +190,11 @@ class _RecordPurchaseScreenState extends State<RecordPurchaseScreen> {
                 controller: _quantityController,
                 decoration: InputDecoration(
                   labelText: 'Jumlah Dibeli (pcs)',
-                  prefixIcon: const Icon(Icons.production_quantity_limits),
+                  prefixIcon: const Icon(Icons.numbers),
                   border: const OutlineInputBorder(),
-                   suffixIcon: _quantityController.text.isNotEmpty
-                      ? IconButton(icon: const Icon(Icons.clear), onPressed: () => _quantityController.clear())
-                      : null,
+                  suffixIcon: _quantityController.text.isNotEmpty
+                    ? IconButton(icon: const Icon(Icons.clear), onPressed: () => _quantityController.clear())
+                    : null,
                 ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
@@ -208,11 +208,11 @@ class _RecordPurchaseScreenState extends State<RecordPurchaseScreen> {
                 controller: _priceController,
                 decoration: InputDecoration(
                   labelText: 'Harga Beli per Unit (Rp)',
-                  prefixIcon: const Icon(Icons.attach_money),
+                  prefixIcon: const Icon(Icons.money),
                   border: const OutlineInputBorder(),
-                   suffixIcon: _priceController.text.isNotEmpty
-                      ? IconButton(icon: const Icon(Icons.clear), onPressed: () => _priceController.clear())
-                      : null,
+                  suffixIcon: _priceController.text.isNotEmpty
+                    ? IconButton(icon: const Icon(Icons.clear), onPressed: () => _priceController.clear())
+                    : null,
                 ),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
