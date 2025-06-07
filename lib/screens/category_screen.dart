@@ -22,11 +22,15 @@ class _CategoryScreenState extends State<CategoryScreen> {
   }
 
   Future<void> _loadCategories() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
     final categories = await ProductService().getAllCategories();
-    setState(() {
-      _categories = categories;
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _categories = categories;
+        _isLoading = false;
+      });
+    }
   }
 
   void _showCategoryDialog({Category? category}) {
@@ -35,7 +39,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text(category == null ? 'Tambah Kategori' : 'Edit Kategori'),
+        title: Text(category == null ? 'Tambah Kategori Baru' : 'Edit Kategori'),
         content: StatefulBuilder( // Use StatefulBuilder to update suffixIcon
           builder: (BuildContext context, StateSetter setStateDialog) {
             return TextField(
@@ -64,17 +68,37 @@ class _CategoryScreenState extends State<CategoryScreen> {
           ElevatedButton(
             onPressed: () async {
               final name = controller.text.trim();
-              if (name.isEmpty) return;
-              if (category == null) {
-                await ProductService().addCategory(Category(name: name));
-              } else {
-                await ProductService().updateCategory(Category(id: category.id, name: name));
+              if (name.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Nama kategori tidak boleh kosong.'), backgroundColor: Colors.red),
+                );
+                return;
               }
-              if (!mounted) return;
-              Navigator.pop(context);
-              _loadCategories();
+              try {
+                if (category == null) {
+                  await ProductService().addCategory(Category(name: name));
+                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Kategori "$name" berhasil ditambahkan.'), backgroundColor: Colors.green));
+                } else {
+                  await ProductService().updateCategory(Category(id: category.id, name: name));
+                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Kategori "${category.name}" berhasil diperbarui menjadi "$name".'), backgroundColor: Colors.green));
+                }
+                if (!mounted) return;
+                Navigator.pop(context);
+                _loadCategories();
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Gagal menyimpan kategori: ${e.toString()}'), backgroundColor: Colors.red),
+                  );
+                }
+              }
             },
-            child: const Text('Simpan'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            // Disable button if name is empty by checking controller.text inside onPressed or using the StatefulBuilder's setState
+            child: const Text('Simpan')
           ),
         ],
       ),
@@ -88,15 +112,27 @@ class _CategoryScreenState extends State<CategoryScreen> {
         title: const Text('Hapus Kategori'),
         content: Text('Yakin ingin menghapus kategori "${category.name}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Hapus')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text('Hapus'),
+          ),
         ],
       ),
     );
 
     if (confirm == true) {
-      await ProductService().deleteCategory(category.id!);
-      _loadCategories();
+      try {
+        await ProductService().deleteCategory(category.id!);
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Kategori "${category.name}" berhasil dihapus.'), backgroundColor: Colors.green));
+        _loadCategories();
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal menghapus kategori: ${e.toString()}'), backgroundColor: Colors.red));
+      }
     }
   }
 
@@ -104,31 +140,63 @@ class _CategoryScreenState extends State<CategoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kelola Kategori'),
+        title: const Text('Kategori Barang'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
       drawer: const AppDrawer(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: _categories.length,
-              itemBuilder: (_, index) {
-                final category = _categories[index];
-                return ListTile(
-                  title: Text(category.name),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
+          : _categories.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      IconButton(icon: const Icon(Icons.edit), onPressed: () => _showCategoryDialog(category: category)),
-                      IconButton(icon: const Icon(Icons.delete), onPressed: () => _deleteCategory(category)),
+                      Icon(Icons.category_outlined, size: 80, color: Colors.grey[400]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Belum Ada Kategori',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tambahkan kategori baru dengan tombol +',
+                        style: TextStyle(color: Colors.grey[500]),
+                      ),
                     ],
                   ),
-                );
-              },
-            ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadCategories,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(12.0),
+                    itemCount: _categories.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 8),
+                    itemBuilder: (_, index) {
+                      final category = _categories[index];
+                      return Card(
+                        elevation: 2.0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+                        child: ListTile(
+                          leading: Icon(Icons.label_outline, color: Colors.blue[700]),
+                          title: Text(category.name, style: const TextStyle(fontWeight: FontWeight.w500)),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(icon: Icon(Icons.edit_outlined, color: Colors.orange[700]), tooltip: "Edit Kategori", onPressed: () => _showCategoryDialog(category: category)),
+                              IconButton(icon: Icon(Icons.delete_outline, color: Colors.red[700]), tooltip: "Hapus Kategori", onPressed: () => _deleteCategory(category)),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showCategoryDialog(),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+        tooltip: 'Tambah Kategori Baru',
         child: const Icon(Icons.add),
       ),
     );
