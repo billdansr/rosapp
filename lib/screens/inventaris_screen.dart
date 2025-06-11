@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rosapp/models/category.dart';
+import 'package:rosapp/models/cart_item.dart'; // Import CartItem model
 import 'package:rosapp/models/product.dart';
 import 'package:rosapp/screens/product_detail_screen.dart';
 import 'package:rosapp/screens/product_form_screen.dart';
@@ -18,6 +19,7 @@ class InventarisScreen extends StatefulWidget {
 
 class _InventarisScreenState extends State<InventarisScreen> {
   final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ');
+  final CartService _cartService = CartService(); // Instantiate CartService
   List<Product> _allProducts = [];
   List<Product> _filteredProducts = [];
   bool _isLoading = true;
@@ -271,16 +273,56 @@ class _InventarisScreenState extends State<InventarisScreen> {
                                       icon: const Icon(Icons.add_shopping_cart),
                                       color: Theme.of(context).primaryColor,
                                       tooltip: 'Tambah ke Keranjang',
-                                      onPressed: () {
-                                        CartService().addToCart(product);
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                      onPressed: () { // Logic for adding to cart with stock validation
+                                        CartItem? existingCartItem;
+                                        try {
+                                          existingCartItem = _cartService
+                                              .getCartItems()
+                                              .firstWhere((item) =>
+                                                  item.product.sku ==
+                                                  product.sku);
+                                        } catch (e) {
+                                          // Item not found in cart, existingCartItem remains null
+                                        }
+
+                                        if (existingCartItem != null) {
+                                          // Produk sudah ada di keranjang, periksa apakah bisa ditambah kuantitasnya
+                                          if (existingCartItem.quantityInCart >=
+                                              product.quantity) { // product.quantity is stock
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                  content: Text(
+                                                      'Stok maks (${product.quantity}) untuk ${product.name} sudah di keranjang.')),
+                                            );
+                                            return;
+                                          }
+                                        } else {
+                                          // Produk baru, periksa apakah stok tersedia
+                                          if (product.quantity <= 0) { // product.quantity is stock
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                  content: Text(
+                                                      'Stok produk ${product.name} habis.')),
+                                            );
+                                            return;
+                                          }
+                                        }
+
+                                        _cartService.addToCart(product);
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
                                           SnackBar(
-                                            content: Text('${product.name} ditambahkan ke keranjang.'),
-                                            duration: const Duration(seconds: 2),
+                                            content: Text(
+                                                '${product.name} ditambahkan ke keranjang.'),
+                                            duration:
+                                                const Duration(seconds: 2),
                                             action: SnackBarAction(
                                               label: 'LIHAT KERANJANG',
                                               onPressed: () {
-                                                Navigator.pushNamed(context, MyApp.posRoute);
+                                                Navigator.pushNamed(
+                                                    context, MyApp.posRoute);
                                               },
                                             ),
                                           ),

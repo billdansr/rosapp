@@ -130,6 +130,31 @@ class _PosScreenState extends State<PosScreen> {
   void _addProductToCart(Product product) {
     if (!mounted) return;
 
+    CartItem? existingCartItem;
+    try {
+      existingCartItem = _cartService.getCartItems().firstWhere(
+            (item) => item.product.sku == product.sku,
+          );
+    } catch (e) {
+      // Item not found in cart, existingCartItem remains null
+    }
+
+    if (existingCartItem != null) {
+      // Produk sudah ada di keranjang, periksa apakah bisa ditambah kuantitasnya
+      if (existingCartItem.quantityInCart >= product.quantity) { // product.quantity is stock
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Stok maks (${product.quantity}) untuk ${product.name} sudah di keranjang.')),
+        );
+        return;
+      }
+    } else {
+      // Produk baru, periksa apakah stok tersedia
+      if (product.quantity <= 0) { // product.quantity is stock
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Stok produk ${product.name} habis.')));
+        return;
+      }
+    }
+
     if (_isScanning) {
       _stopScanning();
     }
@@ -815,6 +840,13 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   void _incrementQuantity(CartItem item) {
+    // Periksa stok sebelum menambah kuantitas
+    if (item.quantityInCart >= item.product.quantity) { // item.product.quantity is stock
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Stok maksimum untuk ${item.product.name} (${item.product.quantity}) telah tercapai.')),
+      );
+      return;
+    }
     _cartService.incrementQuantity(item);
     setState(() {});
   }
