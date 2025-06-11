@@ -698,34 +698,36 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SegmentedButton<ReportFilterType>(
-          segments: const <ButtonSegment<ReportFilterType>>[
-            ButtonSegment<ReportFilterType>(value: ReportFilterType.daily, label: Text('Harian'), icon: Icon(Icons.today)),
-            ButtonSegment<ReportFilterType>(value: ReportFilterType.monthly, label: Text('Bulanan'), icon: Icon(Icons.calendar_month)),
-            ButtonSegment<ReportFilterType>(value: ReportFilterType.yearly, label: Text('Tahunan'), icon: Icon(Icons.calendar_view_day)),
-            ButtonSegment<ReportFilterType>(value: ReportFilterType.range, label: Text('Rentang'), icon: Icon(Icons.date_range)),
-          ],
-          selected: <ReportFilterType>{_filterType},
-          onSelectionChanged: (Set<ReportFilterType> newSelection) {
-            setState(() {
-              _filterType = newSelection.first;
-              // Reset/adjust date selections based on the new filter type for clarity
-              final now = DateTime.now();
-              _selectedDate = now;
-              _selectedMonth = now.month;
-              _selectedYear = now.year;
-              _selectedDateRange = DateTimeRange(
-                start: now.subtract(const Duration(days: 6)),
-                end: now
-              );
-            });
-            _loadSalesData();
-          },
-          style: SegmentedButton.styleFrom(
-            backgroundColor: Colors.blueGrey[50],
-            foregroundColor: Colors.blueGrey[700],
-            selectedForegroundColor: Colors.white,
-            selectedBackgroundColor: Colors.blue,
+        Center(
+          child: SegmentedButton<ReportFilterType>(
+            segments: const <ButtonSegment<ReportFilterType>>[
+              ButtonSegment<ReportFilterType>(value: ReportFilterType.daily, label: Text('Harian'), icon: Icon(Icons.today)),
+              ButtonSegment<ReportFilterType>(value: ReportFilterType.monthly, label: Text('Bulanan'), icon: Icon(Icons.calendar_month)),
+              ButtonSegment<ReportFilterType>(value: ReportFilterType.yearly, label: Text('Tahunan'), icon: Icon(Icons.calendar_view_day)),
+              ButtonSegment<ReportFilterType>(value: ReportFilterType.range, label: Text('Rentang'), icon: Icon(Icons.date_range)),
+            ],
+            selected: <ReportFilterType>{_filterType},
+            onSelectionChanged: (Set<ReportFilterType> newSelection) {
+              setState(() {
+                _filterType = newSelection.first;
+                // Reset/adjust date selections based on the new filter type for clarity
+                final now = DateTime.now();
+                _selectedDate = now;
+                _selectedMonth = now.month;
+                _selectedYear = now.year;
+                _selectedDateRange = DateTimeRange(
+                  start: now.subtract(const Duration(days: 6)),
+                  end: now
+                );
+              });
+              _loadSalesData();
+            },
+            style: SegmentedButton.styleFrom(
+              backgroundColor: Colors.blueGrey[50],
+              foregroundColor: Colors.blueGrey[700],
+              selectedForegroundColor: Colors.white,
+              selectedBackgroundColor: Colors.blue,
+            ),
           ),
         ),
         const SizedBox(height: 12),
