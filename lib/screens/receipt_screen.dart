@@ -11,10 +11,8 @@ class ReceiptScreen extends StatelessWidget {
   static const String kStoreAddressLine1 = 'Jl. Mega Nusa Endah No.Raya';
   static const String kStoreAddressLine2 = 'Karyamulya, Kesambi, Cirebon';
   static const String kThankYouMessage = 'TERIMA KASIH!';
-  static const String kNoReturnsMessage = 'Barang tidak dapat ditukar';
-  static const String kSeparator = '-------------------------------';
-  static const String kScreenSeparator =
-      '--------------------------------------------------';
+  static const String kSeparator = '-----------------------------------'; // Adjusted for PDF
+  static const String kScreenSeparator =  '------------------------------------------------------'; // Made longer
 
   // Formatters
   static final NumberFormat _currencyFormat =
@@ -73,7 +71,10 @@ class ReceiptScreen extends StatelessWidget {
                 ),
               ),
               pw.SizedBox(height: 5),
-              pw.Text(kSeparator, style: const pw.TextStyle(fontSize: 8)),
+              pw.Center(
+                child:
+                    pw.Text(kSeparator, style: const pw.TextStyle(fontSize: 8)),
+              ),
               pw.SizedBox(height: 3),
               pw.Text(
                 'Tanggal: ${_receiptDateFormatter.format(transactionTime)}',
@@ -84,7 +85,10 @@ class ReceiptScreen extends StatelessWidget {
                 style: const pw.TextStyle(fontSize: 10),
               ),
               pw.SizedBox(height: 5),
-              pw.Text(kSeparator, style: const pw.TextStyle(fontSize: 8)),
+              pw.Center(
+                child:
+                    pw.Text(kSeparator, style: const pw.TextStyle(fontSize: 8)),
+              ),
               pw.SizedBox(height: 5),
               ...cartItems.map(
                 (item) => pw.Row(
@@ -116,7 +120,10 @@ class ReceiptScreen extends StatelessWidget {
                 ),
               ),
               pw.SizedBox(height: 5),
-              pw.Text(kSeparator, style: const pw.TextStyle(fontSize: 8)),
+              pw.Center(
+                child:
+                    pw.Text(kSeparator, style: const pw.TextStyle(fontSize: 8)),
+              ),
               pw.SizedBox(height: 5),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -164,7 +171,10 @@ class ReceiptScreen extends StatelessWidget {
                 ],
               ),
               pw.SizedBox(height: 5),
-              pw.Text(kSeparator, style: const pw.TextStyle(fontSize: 8)),
+              pw.Center(
+                child:
+                    pw.Text(kSeparator, style: const pw.TextStyle(fontSize: 8)),
+              ),
               pw.SizedBox(height: 8),
               pw.Center(
                 child: pw.Text(
@@ -173,13 +183,6 @@ class ReceiptScreen extends StatelessWidget {
                     fontWeight: pw.FontWeight.bold,
                     fontSize: 10,
                   ),
-                ),
-              ),
-              pw.SizedBox(height: 3),
-              pw.Center(
-                child: pw.Text(
-                  kNoReturnsMessage,
-                  style: const pw.TextStyle(fontSize: 8),
                 ),
               ),
             ],
@@ -278,10 +281,12 @@ class ReceiptScreen extends StatelessWidget {
   Widget _buildTransactionInfo() {
     return Column(
       children: [
-        Text(
-          kScreenSeparator,
-          style: const TextStyle(fontSize: 14),
-          textAlign: TextAlign.center,
+        Center(
+          child: Text(
+            kScreenSeparator,
+            style: const TextStyle(fontSize: 14),
+            textAlign: TextAlign.center, // Keep for text within its own box
+          ),
         ),
         const SizedBox(height: 8),
         _buildInfoRow(
@@ -298,10 +303,12 @@ class ReceiptScreen extends StatelessWidget {
 
   List<Widget> _buildItemsList() {
     return [
-      Text(
-        kScreenSeparator,
-        style: const TextStyle(fontSize: 14),
-        textAlign: TextAlign.center,
+      Center(
+        child: Text(
+          kScreenSeparator,
+          style: const TextStyle(fontSize: 14),
+          textAlign: TextAlign.center,
+        ),
       ),
       const SizedBox(height: 8),
       ...cartItems.map((item) => ListTile(
@@ -317,10 +324,12 @@ class ReceiptScreen extends StatelessWidget {
   Widget _buildPaymentSummary() {
     return Column(
       children: [
-        Text(
-          kScreenSeparator,
-          style: const TextStyle(fontSize: 14),
-          textAlign: TextAlign.center,
+        Center(
+          child: Text(
+            kScreenSeparator,
+            style: const TextStyle(fontSize: 14),
+            textAlign: TextAlign.center,
+          ),
         ),
         const SizedBox(height: 8),
         _buildSummaryRow(
@@ -345,10 +354,12 @@ class ReceiptScreen extends StatelessWidget {
   Widget _buildFooter() {
     return Column(
       children: [
-        Text(
-          kScreenSeparator,
-          style: const TextStyle(fontSize: 14),
-          textAlign: TextAlign.center,
+        Center(
+          child: Text(
+            kScreenSeparator,
+            style: const TextStyle(fontSize: 14),
+            textAlign: TextAlign.center,
+          ),
         ),
         const SizedBox(height: 24),
         Center(
@@ -358,13 +369,6 @@ class ReceiptScreen extends StatelessWidget {
               fontWeight: FontWeight.bold,
               fontSize: 18,
             ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Center(
-          child: Text(
-            kNoReturnsMessage,
-            style: const TextStyle(fontSize: 14),
           ),
         ),
       ],
