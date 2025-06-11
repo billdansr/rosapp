@@ -1,16 +1,92 @@
-# rosapp
+# RosApp
 
-A new Flutter project.
+A Windows desktop point of sale and inventory management system built with Flutter.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+- **Inventory Management**
+  - Product catalog with SKU/barcode support
+  - Stock level tracking
+  - Category management
+  - Low stock alerts
+  - Purchase order tracking
 
-A few resources to get you started if this is your first Flutter project:
+- **Point of Sale**
+  - Barcode scanning
+  - Quick product search
+  - Cart management
+  - Receipt printing
+  - Cash transaction handling
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- **Reporting**
+  - Daily sales reports
+  - Inventory status
+  - Product performance
+  - Purchase history
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## System Requirements
+
+- Windows 10/11
+- 4GB RAM minimum
+- 500MB free disk space
+- 1280x720 minimum screen resolution
+- Camera (optional, for barcode scanning)
+- Printer (optional, for receipts)
+
+## Development Setup
+
+1. Install Flutter SDK
+```bash
+flutter doctor
+```
+
+2. Enable Windows Desktop Support
+```bash
+flutter config --enable-windows-desktop
+```
+
+3. Install Dependencies
+```bash
+flutter pub get
+```
+
+4. Run the Application
+```bash
+flutter run -d windows
+```
+
+## Build
+
+To create a release build:
+```bash
+flutter build windows
+```
+
+This will generate an MSIX installer at `build/windows/runner/Release/`.
+
+## Project Structure
+
+```
+lib/
+├── models/      # Data models
+├── screens/     # UI screens
+├── services/    # Business logic
+├── widgets/     # Reusable components
+└── main.dart    # Entry point
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## License
+
+Copyright © 2025. All rights reserved.
+
+## Support
+
+For technical support or bug reports, please open an issue on our GitHub repository.
