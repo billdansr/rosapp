@@ -876,7 +876,11 @@ class _PosScreenState extends State<PosScreen> {
     }
 
     final total = _calculateTotal();
-    if (_cashTendered < total) {
+    // Capture the current state of cashTendered and change BEFORE any awaits
+    final double currentCashTendered = _cashTendered;
+    final double currentChange = _change;
+
+    if (currentCashTendered < total) { // Use the captured value
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Pembayaran kurang dari total')),
       );
@@ -908,8 +912,8 @@ class _PosScreenState extends State<PosScreen> {
           builder: (_) => ReceiptScreen(
             cartItems: itemsForReceipt,
             totalPrice: total,
-            cashTendered: _cashTendered,
-            change: _change,
+            cashTendered: currentCashTendered, // Pass the captured value
+            change: currentChange,             // Pass the captured value
             transactionTime: receiptTransactionTime,
             transactionDbId: transactionId,
           ),

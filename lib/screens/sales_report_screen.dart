@@ -762,7 +762,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
             icon: const Icon(Icons.calendar_today),
             label: Text('Tanggal: ${DateFormat('dd MMM yyyy').format(_selectedDate)}'),
             onPressed: () => _pickDailyDate(context),
-             style: _datePickerButtonStyle(),
+            style: _datePickerButtonStyle(),
           ),
         if (_filterType == ReportFilterType.monthly)
           ElevatedButton.icon(
