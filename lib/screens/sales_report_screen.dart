@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart'; // Import fl_chart
 import 'package:rosapp/models/transaction_detail.dart';
 import 'package:rosapp/models/purchase_detail.dart'; // Tambahkan import ini
+import 'package:rosapp/screens/transaction_items_screen.dart'; // Import layar baru
 import 'package:rosapp/services/product_service.dart';
 import 'package:rosapp/widgets/app_drawer.dart';
 import 'package:path_provider/path_provider.dart';
@@ -45,7 +46,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
   double _totalSalesForPeriod = 0.0;
   int _transactionsForPeriodCount = 0;
   double _totalPurchasesForPeriod = 0.0;
-  double _estimatedCogsForPeriod = 0.0;
+  double _estimatedCogsForPeriod = 0.0; // Tetap ada, tidak masalah
   List<TransactionDetail> _recentTransactions = [];
   double _estimatedProfitForPeriod = 0.0;
   List<FlSpot> _salesChartData = [];
@@ -102,7 +103,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
       final salesForPeriod = await _productService.getTotalSalesForPeriod(startDate, endDate);
       final countForPeriod = await _productService.getTransactionCountForPeriod(startDate, endDate);
       final cogsForPeriod = await _productService.getEstimatedCogsForPeriod(startDate, endDate);
-      final purchasesForPeriod = await _productService.getTotalPurchasesForPeriod(startDate, endDate);
+      final purchasesForPeriod = await _productService.getTotalPurchasesForPeriod(startDate, endDate); // Tetap ada
       final recent = await _productService.getRecentTransactions(limit: 5);
       final chartDataRaw = await _productService.getDailySalesForChart(startDate, endDate);
       final purchasesReport = await _productService.getPurchasesForPeriodReport(startDate, endDate); // Ambil data pembelian
@@ -153,7 +154,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
         _totalSalesForPeriod = salesForPeriod;
         _transactionsForPeriodCount = countForPeriod;
         _estimatedCogsForPeriod = cogsForPeriod;
-        _totalPurchasesForPeriod = purchasesForPeriod;
+        _totalPurchasesForPeriod = purchasesForPeriod; // Tetap ada
         _recentTransactions = recent;
         _estimatedProfitForPeriod = salesForPeriod - cogsForPeriod;
         _salesChartData = chartSpots;
@@ -663,27 +664,37 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                         ),
                   const SizedBox(height: 24),
                   Text(
-                    'Transaksi Terbaru',
+                    _getPeriodTitle('Detail Transaksi'), // Menggunakan judul yang dinamis
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 8),
-                  _recentTransactions.isEmpty
+                  _transactionsForPeriodReport.isEmpty // Menggunakan _transactionsForPeriodReport
                       ? const Center(
                           child: Padding(
                           padding: EdgeInsets.symmetric(vertical: 20.0),
-                          child: Text('Belum ada transaksi.'),
+                          child: Text('Belum ada transaksi untuk periode ini.'),
                         ))
                       : Card(
                           elevation: 2,
                           child: Column(
-                            children: _recentTransactions.map((tx) {
+                            children: _transactionsForPeriodReport.map((tx) { // Menggunakan _transactionsForPeriodReport
                               return ListTile(
                                 leading: CircleAvatar(
                                   backgroundColor: Colors.blue.shade100,
                                   child: const Icon(Icons.shopping_cart, color: Colors.blue),
                                 ),
-                                title: Text(currencyFormatter.format(tx.totalPrice)),
+                                title: Text(
+                                  'ID: ${tx.id} - ${currencyFormatter.format(tx.totalPrice)}',
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
+                                ),
                                 subtitle: Text(dateTimeFormatter.format(tx.date)),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => TransactionItemsScreen(transactionHeader: tx)),
+                                  );
+                                },
                                 );
                             }).toList(),
                           ),

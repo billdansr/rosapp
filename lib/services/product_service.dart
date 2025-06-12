@@ -3,6 +3,7 @@ import 'package:rosapp/models/cart_item.dart';
 import 'package:rosapp/models/category.dart';
 import 'package:rosapp/models/purchase_detail.dart';
 import 'package:rosapp/models/product.dart';
+import 'package:rosapp/models/transaction_item_detail.dart' as ti_detail; // Model baru
 import 'package:rosapp/models/transaction_detail.dart'; // Asumsikan model ini ada
 import 'package:rosapp/models/purchase.dart'; // Import the Purchase model
 import 'package:rosapp/services/db_helper.dart';
@@ -345,5 +346,23 @@ class ProductService {
         totalPrice: maps[i]['total_price'],
       );
     });
+  }
+
+  Future<List<ti_detail.TransactionItemDetail>> getTransactionItems(int transactionId) async {
+    final db = await DBHelper.database;
+    final List<Map<String, dynamic>> maps = await db.rawQuery('''
+      SELECT 
+        ti.quantity, 
+        ti.price, 
+        p.name as product_name
+      FROM transaction_items ti
+      JOIN products p ON ti.product_id = p.id
+      WHERE ti.transaction_id = ?
+    ''', [transactionId]);
+
+    if (maps.isEmpty) {
+      return [];
+    }
+    return maps.map((map) => ti_detail.TransactionItemDetail.fromMap(map)).toList();
   }
 }
