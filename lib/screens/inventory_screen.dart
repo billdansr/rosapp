@@ -256,7 +256,7 @@ class _InventarisScreenState extends State<InventarisScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      'Stok: ${product.quantity} pcs',
+                                      'Qty. ${product.quantity} pcs',
                                       style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                                     ),
                                   ],

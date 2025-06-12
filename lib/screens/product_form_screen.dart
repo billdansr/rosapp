@@ -35,12 +35,25 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       quantityController.text = widget.product!.quantity.toString();
       skuController.text = widget.product!.sku;
     }
-    _loadCategories();
+    _loadInitialData();
   }
 
-  Future<void> _loadCategories() async {
-    final categories = await ProductService().getAllCategories();
-    setState(() => _categories = categories);
+  Future<void> _loadInitialData() async {
+    // Load all available categories
+    final allCategories = await ProductService().getAllCategories();
+    if (!mounted) return;
+    setState(() {
+      _categories = allCategories;
+    });
+
+    // If editing a product, load its assigned categories
+    if (widget.product != null && widget.product!.id != null) {
+      final assignedCategoryIds = await ProductService().getProductCategories(widget.product!.id!);
+      if (!mounted) return;
+      setState(() {
+        _selectedCategoryIds.addAll(assignedCategoryIds);
+      });
+    }
   }
 
   @override
