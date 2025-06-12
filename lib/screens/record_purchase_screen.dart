@@ -43,7 +43,7 @@ class _RecordPurchaseScreenState extends State<RecordPurchaseScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memuat daftar produk: $e')),
+          SnackBar(content: Text('Gagal memuat daftar barang: $e')),
         );
       }
     }
@@ -75,7 +75,7 @@ class _RecordPurchaseScreenState extends State<RecordPurchaseScreen> {
     if (_formKey.currentState!.validate()) {
       if (_selectedProduct == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Silakan pilih produk terlebih dahulu.')),
+          const SnackBar(content: Text('Silakan pilih barang terlebih dahulu.')),
         );
         return;
       }
@@ -94,7 +94,7 @@ class _RecordPurchaseScreenState extends State<RecordPurchaseScreen> {
         await _productService.recordPurchase(purchase);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Pembelian berhasil dicatat! Stok produk diperbarui.')),
+            const SnackBar(content: Text('Pembelian berhasil dicatat! Stok barang diperbarui.')),
           );
           Navigator.pushReplacement( // Navigate to a specific screen after success
             context,
@@ -153,10 +153,10 @@ class _RecordPurchaseScreenState extends State<RecordPurchaseScreen> {
                     controller: fieldTextEditingController,
                     focusNode: fieldFocusNode,
                     decoration: InputDecoration(
-                      labelText: 'Cari Produk (Nama/SKU)',
+                      labelText: 'Cari Barang (Nama/SKU)',
                       prefixIcon: const Icon(Icons.search),
                       border: const OutlineInputBorder(),
-                       suffixIcon: fieldTextEditingController.text.isNotEmpty
+                      suffixIcon: fieldTextEditingController.text.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.clear),
                               onPressed: () {
@@ -168,7 +168,7 @@ class _RecordPurchaseScreenState extends State<RecordPurchaseScreen> {
                     ),
                     validator: (value) {
                       if (_selectedProduct == null && (value == null || value.isEmpty)) {
-                        return 'Pilih atau cari produk';
+                        return 'Pilih atau cari barang';
                       }
                       if (_selectedProduct == null && value != null && value.isNotEmpty) {
                         // Jika ada teks tapi tidak ada produk terpilih (misal setelah clear)
@@ -181,7 +181,7 @@ class _RecordPurchaseScreenState extends State<RecordPurchaseScreen> {
               ),
               if (_selectedProduct != null) ...[
                 const SizedBox(height: 8),
-                Text('Produk Terpilih: ${_selectedProduct!.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('Barang Terpilih: ${_selectedProduct!.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
                 Text('Jumlah Stok Saat Ini: ${_selectedProduct!.quantity} pcs'),
                 const SizedBox(height: 8),
               ],

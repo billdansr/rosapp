@@ -61,7 +61,7 @@ class ProductDetailScreen extends StatelessWidget {
                 const Divider(),
                 _buildDetailRow(context, Icons.description, 'Deskripsi', (product.description != null && product.description!.isNotEmpty) ? product.description! : '-'),
                 const Divider(),
-                _buildDetailRow(context, Icons.inventory_2, 'Jumlah Stok', '${product.quantity} pcs'),
+                _buildDetailRow(context, Icons.inventory_2, 'Qty (Jumlah Stok)', '${product.quantity} pcs'),
                 const Divider(),
                 _buildDetailRow(context, Icons.price_change, 'Harga Satuan (Harga Jual)', currency.format(product.unitPrice)),
                 const SizedBox(height: 24),

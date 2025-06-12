@@ -668,7 +668,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                                 ),
                                 subtitle: Text(
                                   'Supplier: ${purchase.supplierName ?? "-"}\n'
-                                  'Tgl: ${DateFormat('dd MMM yyyy').format(purchase.purchaseDate)} | Jml: ${purchase.quantityPurchased} @ ${currencyFormatter.format(purchase.purchasePricePerUnit)}'
+                                  'Tgl. ${DateFormat('dd MMM yyyy').format(purchase.purchaseDate)} | Qty. ${purchase.quantityPurchased} @ ${currencyFormatter.format(purchase.purchasePricePerUnit)}'
                                 ),
                                 isThreeLine: true,
                               );

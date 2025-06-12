@@ -746,11 +746,11 @@ class _PosScreenState extends State<PosScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Text(
-                        'Posisikan barcode dalam frame dan tunggu...',
+                        'Posisikan Barcode atau QR Code dalam frame dan tunggu...',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 14,
+                          fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
