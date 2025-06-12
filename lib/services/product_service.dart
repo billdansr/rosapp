@@ -313,20 +313,47 @@ class ProductService {
   }
 
   // Metode untuk data grafik: penjualan harian dalam rentang tanggal
-  Future<List<Map<String, dynamic>>> getDailySalesForChart(DateTime startDate, DateTime endDate) async {
+  Future<List<Map<String, dynamic>>> getDailySalesForChart(
+    DateTime startDate, 
+    DateTime endDate,
+    // Tambahkan parameter untuk membedakan jenis filter, jika diperlukan oleh UI lain
+    // Untuk SalesReportScreen, kita akan asumsikan filterType sudah diketahui saat memanggil
+    // dan startDate/endDate sudah disesuaikan.
+    // Untuk kasus 'harian', startDate dan endDate akan mencakup hari yang sama.
+    bool isDailyView, // True for hourly breakdown, false for daily totals over a range/month/year
+  ) async {
     final db = await DBHelper.database;
-    final startDateSql = DateFormat('yyyy-MM-dd').format(startDate);
-    final endDateSql = DateFormat('yyyy-MM-dd').format(endDate);
+
+    String groupByClause;
+    String selectDateColumn;
+    String whereClause;
+    List<String> whereArgs;
+
+    if (isDailyView) {
+      // Untuk tampilan harian, kelompokkan per jam
+      selectDateColumn = "strftime('%Y-%m-%d %H:00:00', date) as sales_hour_start";
+      groupByClause = "strftime('%Y-%m-%d %H:00:00', date)";
+      // Filter untuk hari spesifik (startDate sudah diatur ke awal hari)
+      // Menggunakan DATE(date) = DATE(?) untuk konsistensi dengan cara lain mengambil data harian.
+      whereClause = "DATE(date) = DATE(?)";
+      whereArgs = [DateFormat('yyyy-MM-dd HH:mm:ss').format(startDate)]; // DATE() akan mengekstrak YYYY-MM-DD
+    } else {
+      // Untuk tampilan lain (bulanan, tahunan, rentang), kelompokkan per hari
+      selectDateColumn = "DATE(date) as sales_date";
+      groupByClause = "DATE(date)";
+      whereClause = "date BETWEEN ? AND ?";
+      whereArgs = [DateFormat('yyyy-MM-dd HH:mm:ss').format(startDate), DateFormat('yyyy-MM-dd HH:mm:ss').format(endDate)];
+    }
 
     final result = await db.rawQuery('''
       SELECT 
-        DATE(date) as sales_date, 
+        $selectDateColumn,
         SUM(total_price) as daily_total
       FROM transactions
-      WHERE DATE(date) BETWEEN ? AND ?
-      GROUP BY DATE(date)
-      ORDER BY sales_date ASC
-    ''', [startDateSql, endDateSql]);
+      WHERE $whereClause
+      GROUP BY $groupByClause
+      ORDER BY $groupByClause ASC
+    ''', whereArgs);
     return result;
   }
 

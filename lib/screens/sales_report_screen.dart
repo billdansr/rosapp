@@ -105,21 +105,38 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
       final cogsForPeriod = await _productService.getEstimatedCogsForPeriod(startDate, endDate);
       final purchasesForPeriod = await _productService.getTotalPurchasesForPeriod(startDate, endDate); // Tetap ada
       final recent = await _productService.getRecentTransactions(limit: 5);
-      final chartDataRaw = await _productService.getDailySalesForChart(startDate, endDate);
+      
+      // Tentukan apakah ini tampilan harian untuk query chart
+      final bool isDailyChartView = _filterType == ReportFilterType.daily;
+      final chartDataRaw = await _productService.getDailySalesForChart(startDate, endDate, isDailyChartView);
       final purchasesReport = await _productService.getPurchasesForPeriodReport(startDate, endDate); // Ambil data pembelian
       final transactionsForReport = await _productService.getTransactionsForPeriod(startDate, endDate); // Ambil SEMUA transaksi untuk periode laporan
 
       List<FlSpot> chartSpots = [];
       if (chartDataRaw.isNotEmpty) {
-        chartSpots = chartDataRaw.asMap().entries.map((entry) {
-          // final int index = entry.key; // Use index for X-axis if dates are consecutive
-          final data = entry.value;
-          final date = DateTime.parse(data['sales_date'] as String);
-          
-          // X-axis: For simplicity, using day of the month or day of the year.
-          // A more robust solution might use timestamps or a normalized index.
+        for (var dataPoint in chartDataRaw) {
+          // Gunakan kolom yang benar berdasarkan isDailyChartView
+          final String dateStringKey = isDailyChartView ? 'sales_hour_start' : 'sales_date';
+          final dateString = dataPoint[dateStringKey] as String?;
+          final dailyTotalValue = dataPoint['daily_total']; // Bisa jadi num atau null
+
+          if (dateString == null || dailyTotalValue == null) {
+            // Jika sales_date atau daily_total null, lewati data point ini
+            debugPrint('SalesReportScreen: Melewati data point chart karena dateString atau dailyTotalValue null: $dataPoint');
+            continue; 
+          }
+
+          final DateTime date;
+          try {
+            date = DateTime.parse(dateString);
+          } catch (e) {
+            debugPrint('SalesReportScreen: Error parsing tanggal untuk chart: $dateString. Error: $e');
+            continue; // Lewati jika format tanggal tidak valid
+          }
+
           double xValue;
-          double yValue = (data['daily_total'] as num).toDouble();
+          // dailyTotalValue sudah dipastikan tidak null di sini.
+          double yValue = (dailyTotalValue as num).toDouble(); 
 
           switch (_filterType) {
             case ReportFilterType.daily:
@@ -135,7 +152,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
               if (_selectedDateRange != null) {
                 xValue = date.difference(_selectedDateRange!.start).inDays.toDouble();
               } else {
-                xValue = date.day.toDouble();
+                xValue = date.day.toDouble(); // Fallback
               }
               break;
             case ReportFilterType.yearly:
@@ -143,9 +160,8 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
               xValue = date.month.toDouble();
               break;
           }
-
-          return FlSpot(xValue, yValue);
-        }).toList();
+          chartSpots.add(FlSpot(xValue, yValue));
+        }
       }
 
       if (!mounted) return;
@@ -722,10 +738,12 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
               setState(() {
                 _filterType = newSelection.first;
                 // Reset/adjust date selections based on the new filter type for clarity
-                final now = DateTime.now();
-                _selectedDate = now;
-                _selectedMonth = now.month;
-                _selectedYear = now.year;
+                final now = DateTime.now(); // Default to today for resets
+                // Ensure _selectedDate is start of day, important for daily filter's title generation
+                _selectedDate = DateTime(now.year, now.month, now.day); 
+                _selectedMonth = now.month; // Default month
+                _selectedYear = now.year;   // Default year
+                // Default range, e.g., last 7 days ending today
                 _selectedDateRange = DateTimeRange(
                   start: now.subtract(const Duration(days: 6)),
                   end: now
@@ -881,26 +899,17 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
   else if (_filterType == ReportFilterType.range) {
     if (_selectedDateRange != null) {
       final days = _selectedDateRange!.duration.inDays;
-      if (days <= 31) {
-        // Show day numbers for short ranges
-        text = intValue.toString();
-      } else {
-        // For longer ranges, show actual dates
-        try {
-          final date = _selectedDateRange!.start.add(Duration(days: intValue - 1));
-          text = DateFormat('d MMM').format(date);
-        } catch (e) {
-          text = intValue.toString();
-        }
-      }
+      // intValue is days from start (0, 1, 2...)
+      final date = _selectedDateRange!.start.add(Duration(days: intValue));
+      text = DateFormat('d MMM').format(date);
     } else {
       text = intValue.toString();
     }
   }
   else { // Yearly
     try {
-      final date = DateTime(_selectedYear, 1, 1).add(Duration(days: intValue - 1));
-      text = DateFormat('MMM').format(date); // Just show month abbreviation
+      // intValue for yearly chart is the month number (1-12)
+      text = DateFormat('MMM').format(DateTime(_selectedYear, intValue, 1));
     } catch (e) {
       text = intValue.toString();
     }
