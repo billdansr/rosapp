@@ -839,16 +839,30 @@ class _PosScreenState extends State<PosScreen> {
     );
   }
 
-  void _incrementQuantity(CartItem item) {
-    // Periksa stok sebelum menambah kuantitas
-    if (item.quantityInCart >= item.product.quantity) { // item.product.quantity is stock
+  void _incrementQuantity(CartItem cartItem) {
+    // Dapatkan informasi produk terbaru dari _allProducts untuk pemeriksaan stok
+    Product? currentProductInfo;
+    try {
+      // Cari berdasarkan ID produk untuk konsistensi
+      currentProductInfo = _allProducts.firstWhere((p) => p.id == cartItem.product.id);
+    } catch (e) {
+      // Jika produk tidak ditemukan di _allProducts, ini bisa jadi masalah data.
+      // Untuk keamanan, jangan izinkan penambahan jika info terbaru tidak ada.
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Stok maksimum untuk ${item.product.name} (${item.product.quantity}) telah tercapai.')),
+        SnackBar(content: Text('Info stok terbaru untuk ${cartItem.product.name} tidak ditemukan.')),
       );
       return;
     }
-    _cartService.incrementQuantity(item);
-    setState(() {});
+
+    // Periksa stok menggunakan informasi dari currentProductInfo
+    if (cartItem.quantityInCart >= currentProductInfo.quantity) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Stok maksimum untuk ${currentProductInfo.name} (${currentProductInfo.quantity}) telah tercapai.')),
+      );
+      return;
+    }
+    _cartService.incrementQuantity(cartItem);
+    setState(() {}); // Perbarui UI untuk menampilkan kuantitas baru di keranjang
   }
 
   void _decrementQuantity(CartItem item) {
