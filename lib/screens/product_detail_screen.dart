@@ -57,13 +57,13 @@ class ProductDetailScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildDetailRow(context, Icons.qr_code_scanner, 'SKU', product.sku),
+                _buildDetailRow(context, Icons.qr_code_scanner, 'SKU (Kode Barang)', product.sku),
                 const Divider(),
                 _buildDetailRow(context, Icons.description, 'Deskripsi', (product.description != null && product.description!.isNotEmpty) ? product.description! : '-'),
                 const Divider(),
-                _buildDetailRow(context, Icons.inventory_2, 'Jumlah', '${product.quantity} pcs'),
+                _buildDetailRow(context, Icons.inventory_2, 'Jumlah Stok', '${product.quantity} pcs'),
                 const Divider(),
-                _buildDetailRow(context, Icons.price_change, 'Harga Satuan', currency.format(product.unitPrice)),
+                _buildDetailRow(context, Icons.price_change, 'Harga Satuan (Harga Jual)', currency.format(product.unitPrice)),
                 const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,

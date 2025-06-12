@@ -132,7 +132,7 @@ class _InventarisScreenState extends State<InventarisScreen> {
                     textInputAction: TextInputAction.search,
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: 'Cari nama atau SKU produk...',
+                      hintText: 'Cari nama atau kode barang...',
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
                       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0), borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2.0)),
                       prefixIcon: const Icon(Icons.search),

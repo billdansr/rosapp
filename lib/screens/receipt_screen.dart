@@ -8,7 +8,7 @@ import 'package:printing/printing.dart';
 class ReceiptScreen extends StatelessWidget {
   // Constants
   static const String kStoreName = 'Warung Rosazza';
-  static const String kStoreAddressLine1 = 'Jl. Mega Nusa Endah No.Raya';
+  static const String kStoreAddressLine1 = 'Jl. Mega Nusa Endah No. Raya';
   static const String kStoreAddressLine2 = 'Karyamulya, Kesambi, Cirebon';
   static const String kThankYouMessage = 'TERIMA KASIH!';
   static const String kSeparator = '-----------------------------------'; // Adjusted for PDF

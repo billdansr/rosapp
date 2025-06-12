@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:rosapp/screens/sales_report_screen.dart';
 import 'package:rosapp/screens/pos_screen.dart';
-import 'package:rosapp/screens/inventaris_screen.dart';
+import 'package:rosapp/screens/inventory_screen.dart';
 import 'package:rosapp/screens/category_screen.dart';
 import 'package:rosapp/screens/record_purchase_screen.dart';
 

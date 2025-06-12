@@ -697,7 +697,7 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
                                   child: const Icon(Icons.shopping_cart, color: Colors.blue),
                                 ),
                                 title: Text(
-                                  'ID: ${tx.id} - ${currencyFormatter.format(tx.totalPrice)}',
+                                  'No. ${tx.id} - ${currencyFormatter.format(tx.totalPrice)}',
                                   style: const TextStyle(fontWeight: FontWeight.w500),
                                 ),
                                 subtitle: Text(dateTimeFormatter.format(tx.date)),

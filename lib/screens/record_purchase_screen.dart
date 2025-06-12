@@ -5,7 +5,7 @@ import 'package:rosapp/models/product.dart';
 import 'package:rosapp/models/purchase.dart';
 import 'package:rosapp/services/product_service.dart';
 import 'package:rosapp/widgets/app_drawer.dart';
-import 'package:rosapp/screens/inventaris_screen.dart';
+import 'package:rosapp/screens/inventory_screen.dart';
 
 class RecordPurchaseScreen extends StatefulWidget {
   const RecordPurchaseScreen({super.key});
@@ -182,7 +182,7 @@ class _RecordPurchaseScreenState extends State<RecordPurchaseScreen> {
               if (_selectedProduct != null) ...[
                 const SizedBox(height: 8),
                 Text('Produk Terpilih: ${_selectedProduct!.name}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text('Stok Saat Ini: ${_selectedProduct!.quantity} pcs'),
+                Text('Jumlah Stok Saat Ini: ${_selectedProduct!.quantity} pcs'),
                 const SizedBox(height: 8),
               ],
               const SizedBox(height: 16),
@@ -223,7 +223,7 @@ class _RecordPurchaseScreenState extends State<RecordPurchaseScreen> {
               ),
               const SizedBox(height: 16),
               ListTile(
-                title: Text("Tanggal Pembelian: ${DateFormat('dd MMM yyyy').format(_purchaseDate)}"),
+                title: Text("Tanggal Belanja: ${DateFormat('dd MMM yyyy').format(_purchaseDate)}"),
                 trailing: const Icon(Icons.calendar_today),
                 onTap: () => _selectPurchaseDate(context),
                 shape: RoundedRectangleBorder(

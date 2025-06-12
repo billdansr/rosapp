@@ -73,7 +73,7 @@ class _TransactionItemsScreenState extends State<TransactionItemsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'ID Transaksi: ${widget.transactionHeader.id}',
+                            'Nomor Transaksi: ${widget.transactionHeader.id}',
                             style: const TextStyle(
                                 fontSize: 16, fontWeight: FontWeight.bold),
                           ),
