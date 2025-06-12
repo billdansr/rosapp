@@ -47,7 +47,6 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
   int _transactionsForPeriodCount = 0;
   double _totalPurchasesForPeriod = 0.0;
   double _estimatedCogsForPeriod = 0.0; // Tetap ada, tidak masalah
-  List<TransactionDetail> _recentTransactions = [];
   double _estimatedProfitForPeriod = 0.0;
   List<FlSpot> _salesChartData = [];
   List<TransactionDetail> _transactionsForPeriodReport = []; // Semua transaksi untuk periode laporan
@@ -104,7 +103,6 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
       final countForPeriod = await _productService.getTransactionCountForPeriod(startDate, endDate);
       final cogsForPeriod = await _productService.getEstimatedCogsForPeriod(startDate, endDate);
       final purchasesForPeriod = await _productService.getTotalPurchasesForPeriod(startDate, endDate); // Tetap ada
-      final recent = await _productService.getRecentTransactions(limit: 5);
       
       // Tentukan apakah ini tampilan harian untuk query chart
       final bool isDailyChartView = _filterType == ReportFilterType.daily;
@@ -171,7 +169,6 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
         _transactionsForPeriodCount = countForPeriod;
         _estimatedCogsForPeriod = cogsForPeriod;
         _totalPurchasesForPeriod = purchasesForPeriod; // Tetap ada
-        _recentTransactions = recent;
         _estimatedProfitForPeriod = salesForPeriod - cogsForPeriod;
         _salesChartData = chartSpots;
         _purchasesForPeriodReport = purchasesReport; // Simpan data pembelian
@@ -898,8 +895,6 @@ class _SalesReportScreenState extends State<SalesReportScreen> {
   }
   else if (_filterType == ReportFilterType.range) {
     if (_selectedDateRange != null) {
-      final days = _selectedDateRange!.duration.inDays;
-      // intValue is days from start (0, 1, 2...)
       final date = _selectedDateRange!.start.add(Duration(days: intValue));
       text = DateFormat('d MMM').format(date);
     } else {
