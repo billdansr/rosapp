@@ -15,6 +15,7 @@ import 'package:image/image.dart' as img;
 import 'package:zxing_lib/zxing.dart';
 import 'package:zxing_lib/common.dart';
 import 'dart:io'; // Diperlukan untuk File jika Anda kembali ke takePicture, tapi tidak untuk stream
+import 'package:audioplayers/audioplayers.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key});
@@ -29,6 +30,7 @@ class _PosScreenState extends State<PosScreen> {
   final _skuController = TextEditingController();
   final _cashTenderedController = TextEditingController();
   final CartService _cartService = CartService();
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   List<CameraDescription> _cameras = [];
   List<Product> _allProducts = [];
@@ -165,6 +167,7 @@ class _PosScreenState extends State<PosScreen> {
       _selectionJustProcessedByAutocomplete = true;
       _autocompleteKeyCounter++;
     });
+    _playSound('audio/scan_success.wav'); // Play sound on successful add
   }
 
   Future<void> _addProductToCartBySku() async {
@@ -454,6 +457,7 @@ class _PosScreenState extends State<PosScreen> {
             _skuController.text = zxingResult!.text;
           });
           await _addProductToCartBySku();
+          // Sound will be played by _addProductToCart if successful
         }
       }
     } catch (e, stacktrace) {
@@ -573,12 +577,21 @@ class _PosScreenState extends State<PosScreen> {
             _skuController.text = zxingResult!.text;
           });
           await _addProductToCartBySku();
+          // Sound will be played by _addProductToCart if successful
         }
       }
     } catch (e, stacktrace) {
       log('Error processing camera image for barcode (stream): $e\n$stacktrace');
     } finally {
       _isDetecting = false;
+    }
+  }
+
+  Future<void> _playSound(String assetPath) async {
+    try {
+      await _audioPlayer.play(AssetSource(assetPath));
+    } catch (e) {
+      debugPrint("Error playing sound: $e");
     }
   }
 
@@ -940,6 +953,7 @@ class _PosScreenState extends State<PosScreen> {
         _cashTendered = 0;
         _change = 0;
       });
+      _playSound('audio/cash_register.wav'); // Mainkan suara laci kasir
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -996,6 +1010,7 @@ class _PosScreenState extends State<PosScreen> {
     }
     _skuController.dispose();
     _cashTenderedController.dispose();
+    _audioPlayer.dispose(); // Dispose the audio player
     super.dispose();
   }
 
@@ -1096,14 +1111,17 @@ class _PosScreenState extends State<PosScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.add_shopping_cart, size: 18),
-                  label: const Text('Tambah'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 12),
+                Tooltip(
+                  message: 'Tambah produk ke keranjang berdasarkan SKU/Nama',
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.add_shopping_cart, size: 18),
+                    label: const Text('Tambah'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 12),
+                    ),
+                    onPressed: _addProductToCartBySku,
                   ),
-                  onPressed: _addProductToCartBySku,
                 ),
                 const SizedBox(width: 8),
                 Container(
@@ -1207,6 +1225,7 @@ class _PosScreenState extends State<PosScreen> {
                                 children: [
                                   IconButton(
                                     icon: const Icon(Icons.remove, size: 18),
+                                    tooltip: 'Kurangi kuantitas ${item.product.name}',
                                     onPressed: () => _decrementQuantity(item),
                                     constraints: const BoxConstraints(
                                       minWidth: 36,
@@ -1226,6 +1245,7 @@ class _PosScreenState extends State<PosScreen> {
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.add, size: 18),
+                                    tooltip: 'Tambah kuantitas ${item.product.name}',
                                     onPressed: () => _incrementQuantity(item),
                                     constraints: const BoxConstraints(
                                       minWidth: 36,

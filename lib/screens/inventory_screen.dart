@@ -9,6 +9,7 @@ import 'package:rosapp/services/cart_service.dart'; // Import CartService
 import 'package:rosapp/widgets/app_drawer.dart';
 import 'package:rosapp/main.dart'; // Import MyApp for route names
 import 'package:intl/intl.dart';
+import 'package:audioplayers/audioplayers.dart'; // Import audioplayers
 
 class InventarisScreen extends StatefulWidget {
   const InventarisScreen({super.key});
@@ -20,6 +21,7 @@ class InventarisScreen extends StatefulWidget {
 class _InventarisScreenState extends State<InventarisScreen> {
   final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ');
   final CartService _cartService = CartService(); // Instantiate CartService
+  final AudioPlayer _audioPlayer = AudioPlayer(); // Initialize AudioPlayer
   List<Product> _allProducts = [];
   List<Product> _filteredProducts = [];
   bool _isLoading = true;
@@ -39,7 +41,16 @@ class _InventarisScreenState extends State<InventarisScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _audioPlayer.dispose(); // Dispose the audio player
     super.dispose();
+  }
+
+  Future<void> _playSound(String assetPath) async {
+    try {
+      await _audioPlayer.play(AssetSource(assetPath));
+    } catch (e) {
+      debugPrint("Error playing sound: $e");
+    }
   }
 
   Future<void> _loadCategoriesAndInitialFilter() async {
@@ -198,9 +209,9 @@ class _InventarisScreenState extends State<InventarisScreen> {
                                 _isLoading = false;
                               });
                             } catch (e) {
-                               if (!mounted) return;
-                                debugPrint('Error fetching category products: $e');
-                               setState(() => _isLoading = false);
+                              if (!mounted) return;
+                              debugPrint('Error fetching category products: $e');
+                              setState(() => _isLoading = false);
                             }
                           },
                         ),
@@ -218,7 +229,7 @@ class _InventarisScreenState extends State<InventarisScreen> {
                               Icon(Icons.search_off, size: 60, color: Colors.grey),
                               SizedBox(height: 16),
                               Text(
-                                'Produk tidak ditemukan',
+                                'Barang tidak ditemukan',
                                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey),
                               ),
                               SizedBox(height: 4),
@@ -304,13 +315,14 @@ class _InventarisScreenState extends State<InventarisScreen> {
                                                 .showSnackBar(
                                               SnackBar(
                                                   content: Text(
-                                                      'Stok produk ${product.name} habis.')),
+                                                      'Stok barang ${product.name} habis.')),
                                             );
                                             return;
                                           }
                                         }
 
                                         _cartService.addToCart(product);
+                                        _playSound('audio/scan_success.wav'); // Play sound effect
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(
                                           SnackBar(
@@ -343,6 +355,7 @@ class _InventarisScreenState extends State<InventarisScreen> {
         onPressed: _navigateToAddProduct,
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
+        tooltip: 'Tambah Produk Baru', // Added tooltip
         child: const Icon(Icons.add),
       ),
     );

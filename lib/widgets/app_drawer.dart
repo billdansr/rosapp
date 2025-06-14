@@ -79,7 +79,7 @@ class AppDrawer extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.inventory_outlined),
-            title: const Text('Catat Pembelian Stok'),
+            title: const Text('Restok Barang'),
             selected: currentRoute == MyApp.recordPurchaseRoute,
             selectedTileColor: Colors.blue.withAlpha((0.1 * 255).toInt()),
             onTap: () {

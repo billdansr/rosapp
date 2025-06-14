@@ -115,7 +115,7 @@ class _RecordPurchaseScreenState extends State<RecordPurchaseScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Catat Pembelian Stok'),
+        title: const Text('Restok Barang'), // Changed to be more concise
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),

@@ -132,13 +132,32 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 icon: Icons.label_outline,
                 validator: (value) => value == null || value.isEmpty ? 'Nama produk wajib diisi' : null,
               ),
-              const SizedBox(height: 16),
-              _buildTextField(
-                controller: skuController,
-                labelText: 'SKU (Kode Barang)',
-                icon: Icons.qr_code_scanner,
-                validator: (value) => value == null || value.isEmpty ? 'SKU wajib diisi' : null,
-              ),
+                const SizedBox(height: 16),
+                Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildTextField(
+                  controller: skuController,
+                  labelText: 'SKU (Kode Barang)',
+                  icon: Icons.qr_code_scanner,
+                  validator: (value) => value == null || value.isEmpty ? 'SKU wajib diisi' : null,
+                  ),
+                  const Padding(
+                  padding: EdgeInsets.only(left: 16, top: 4),
+                  child: Text(
+                  'Tips pengisian kode barang:\n'
+                  '• Gunakan kombinasi mudah diingat (misal: M001 untuk Mie)\n'
+                  '• Jangan gunakan spasi atau tanda baca\n'
+                  '• Sebaiknya tidak lebih dari 10 huruf/angka\n'
+                  '• Contoh: K001 (Kopi), S001 (Sabun), R001 (Rokok)',
+                  style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  ),
+                  ),
+                  ),
+                ],
+                ),
               const SizedBox(height: 16),
               _buildTextField(
                 controller: descriptionController,
@@ -157,7 +176,10 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                       keyboardType: TextInputType.number,
                       validator: (value) {
                         if (value == null || value.isEmpty) return 'Harga wajib diisi';
-                        if (double.tryParse(value) == null) return 'Format harga tidak valid';
+                        if (double.tryParse(value) == null) {
+                          return 'Format harga tidak valid.\nContoh yang benar: 1000, 1500.5';
+                        }
+                        if (double.parse(value) < 0) return 'Harga tidak boleh negatif';
                         return null;
                       },
                     ),
@@ -171,7 +193,12 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                       keyboardType: TextInputType.number,
                       validator: (value) {
                         if (value == null || value.isEmpty) return 'Jumlah wajib diisi';
-                        if (int.tryParse(value) == null) return 'Format jumlah tidak valid';
+                        // Examples: "10", "100", "1000" are valid
+                        //          "10.5", "abc", "12.34" are invalid
+                        if (int.tryParse(value) == null) {
+                          return 'Format jumlah tidak valid.\nContoh yang benar: 10, 100, 1000';
+                        }
+                        if (int.parse(value) < 0) return 'Jumlah tidak boleh negatif';
                         return null;
                       },
                     ),

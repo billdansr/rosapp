@@ -6,7 +6,15 @@ A Windows desktop point of sale and inventory management system built with Flutt
 
 - **Inventory Management**
   - Product catalog with SKU/barcode support
-  - Stock level tracking
+  - Stock level tracking  # RosApp v1.1.0.1
+  ---
+  A Windows desktop point of sale and inventory management system built with Flutter.
+  
+  ## What's New in 1.1.0
+  - Sound feedback for better user experience
+  - Various bug fixes and stability improvements
+  
+  [Previous version details and rest of README remain the same...]
   - Category management
   - Low stock alerts
   - Purchase order tracking

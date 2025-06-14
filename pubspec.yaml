@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 1.1.0+1 # Incremented minor version for new feature
 
 environment:
   sdk: '>=3.8.1 <4.0.0' # Or your preferred recent stable version
@@ -48,6 +48,7 @@ dependencies:
   permission_handler: ^12.0.0+1
   excel: ^4.0.6
   open_filex: ^4.7.0
+  audioplayers: ^6.4.0 # Or latest version
 
 dev_dependencies:
   flutter_test:
@@ -73,9 +74,9 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  assets:
+    - assets/audio/ # Assuming you'll place sound files here
+  #   - assets/images/ # Example for images
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -121,8 +122,8 @@ msix_config:
   # The version of your MSIX package. It should generally align with your
   # app's version (from the `version:` field above, e.g., 1.0.0)
   # and must be in the format X.X.X.X.
-  # The last digit is often used for MSIX package revisions if the app code hasn't changed.
-  msix_version: 1.0.0.1 # Should match/increment with your app version
+  # The last digit can be used for MSIX package revisions or align with the build number.
+  msix_version: 1.1.0.1 # Updated to reflect the new minor version and build number
 
   # Path to your application's logo.
   # A .png (e.g., 256x256px or 512x512px) is recommended as MSIX can generate various required sizes.
