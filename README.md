@@ -1,22 +1,24 @@
 # RosApp
 
+[![Build Status](https://img.shields.io/github/actions/workflow/status/your-username/rosapp/build.yml?branch=main)](https://github.com/your-username/rosapp/actions)
+[![License](https://img.shields.io/github/license/your-username/rosapp)](LICENSE)
+[![Flutter Version](https://img.shields.io/badge/Flutter-3.x-blue)](https://flutter.dev/)
+[![Platform](https://img.shields.io/badge/platform-Windows-blue)](https://flutter.dev/desktop)
+
 A Windows desktop point of sale and inventory management system built with Flutter.
+
+<!-- Optional: Add a screenshot or GIF of the application -->
+<!-- ![RosApp Screenshot](path/to/screenshot.png) -->
+
+## What's New in v1.1.0
+- Sound feedback for an improved user experience.
+- Various bug fixes and stability improvements.
 
 ## Features
 
 - **Inventory Management**
   - Product catalog with SKU/barcode support
-  - Stock level tracking  # RosApp v1.1.0.1
-  ---
-  A Windows desktop point of sale and inventory management system built with Flutter.
-  
-  ## What's New in 1.1.0
-  - Sound feedback for better user experience
-  - Various bug fixes and stability improvements
-  
-  [Previous version details and rest of README remain the same...]
   - Category management
-  - Low stock alerts
   - Purchase order tracking
 
 - **Point of Sale**
@@ -93,7 +95,7 @@ lib/
 
 ## License
 
-Copyright © 2025. All rights reserved.
+Copyright (c) 2024. All rights reserved.
 
 ## Support
 
